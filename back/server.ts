@@ -6,7 +6,8 @@ import  { tavily } from '@tavily/core';
 import { PROMPT_TEMPLATE, SYSTEM_PROMPT } from './prompt.js';
 import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
-import { zodResponseMimeType, zodToJsonSchema } from "zod-to-json-schema"; // or use the built-in helper
+import { zodToJsonSchema } from "zod-to-json-schema";
+import { prisma } from "./lib/prisma.js";
 
 const client = tavily({ apiKey: process.env.TAVILY_API_KEY });
 
@@ -21,11 +22,30 @@ const ResponseSchema = z.object({
 });
 type Response = z.infer<typeof ResponseSchema>;
 
-app.get('/', (req, res) => {
-    res.send('Hello, World!');
+
+app.post("/signup",async(req,res)=>{
+})
+
+app.post("/signin",async(req,res)=>{
+})
+
+app.get("/conversation/history",async(req,res)=>{
+})
+
+app.post("/conversation/:conversationId",async(req,res)=>{
+})
+const user = await prisma.user.create({
+  data: {
+    name: "manis11h",
+    email: "anish0102@gmail.com",
+    provider: "Google"
+  }
 });
 
+console.log(user);
 app.post("/ask", async(req, res) => {
+
+
 
 // step1: to get the search query from the user
 const query = req.body.query;
