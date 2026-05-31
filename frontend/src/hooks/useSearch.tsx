@@ -16,14 +16,14 @@ export interface ChatMessage {
 }
 
 export interface SearchState {
-  query: string;          // current/latest query shown in header
-  answer: string;         // current streaming answer
+  query: string;
+  answer: string;
   sources: Source[];
   followUps: string[];
   loading: boolean;
   error: string | null;
   conversationId: string | null;
-  allMessages: ChatMessage[];  // full thread
+  allMessages: ChatMessage[];
 }
 
 const EMPTY_STATE: SearchState = {
@@ -65,7 +65,6 @@ function extractFollowUps(raw: string): string[] {
   return result;
 }
 
-// Converts DB messages array into ChatMessage pairs
 function buildAllMessages(messages: Message[]): ChatMessage[] {
   const result: ChatMessage[] = [];
   for (const msg of messages) {
@@ -108,70 +107,83 @@ export function useSearch(token: string | null) {
     }
   }, [token]);
 
- const search = useCallback(async (query: string) => {
-  if (!token || !query.trim()) return;
+  const search = useCallback(async (query: string) => {
+    if (!token || !query.trim()) return;
 
-  // Use refs to capture latest streaming values
-  const latestAnswer = { current: "" };
-  const latestSources = { current: [] as Source[] };
-  const latestFollowUps = { current: [] as string[] };
+    // Plain objects as refs to capture latest streaming values
+    const latest = {
+      answer: "",
+      sources: [] as Source[],
+      followUps: [] as string[],
+    };
 
-  setState((s) => ({
-    ...s,
-    query,
-    answer: "",
-    sources: [],
-    followUps: [],
-    loading: true,
-    error: null,
-    conversationId: null,
-    allMessages: [...s.allMessages, { role: "USER", content: query }],
-  }));
-
-  try {
-    await streamAsk(
-      token,
+    setState((s) => ({
+      ...s,
       query,
-      (chunk) => {
-        latestAnswer.current = chunk;
-        setState((s) => ({ ...s, answer: chunk }));
-      },
-      (sources) => {
-        latestSources.current = sources;
-        setState((s) => ({ ...s, sources }));
-      },
-      (followUps) => {
-        latestFollowUps.current = followUps;
-        setState((s) => ({ ...s, followUps }));
-      },
-      (id) => {
-        setState((s) => ({
-          ...s,
-          answer: "",
-          loading: false,
-          conversationId: id,
-          allMessages: [
-            ...s.allMessages,
-            {
-              role: "ASSISTANT",
-              content: latestAnswer.current,      // ← from ref, not stale state
-              sources: latestSources.current,     // ← from ref
-              followUps: latestFollowUps.current, // ← from ref
-            },
-          ],
-        }));
-        setTimeout(fetchConversations, 600);
-      }
-    );
-  } catch (err: any) {
-    setState((s) => ({ ...s, loading: false, error: err.message || "Something went wrong" }));
-  }
-}, [token, fetchConversations]);
+      answer: "",
+      sources: [],
+      followUps: [],
+      loading: true,
+      error: null,
+      conversationId: null,
+      allMessages: [...s.allMessages, { role: "USER", content: query }],
+    }));
+
+    try {
+      await streamAsk(
+        token,
+        query,
+        (chunk) => {
+          latest.answer = chunk;
+          setState((s) => ({ ...s, answer: chunk }));
+        },
+        (sources) => {
+          latest.sources = sources;
+          setState((s) => ({ ...s, sources }));
+          // DO NOT set loading: false here
+        },
+        (followUps) => {
+          latest.followUps = followUps;
+          setState((s) => ({ ...s, followUps }));
+        },
+        (id) => {
+          // Commit to allMessages, clear answer, set loading false — all in one update
+          setState((s) => ({
+            ...s,
+            answer: "",
+            loading: false,
+            conversationId: id,
+            allMessages: [
+              ...s.allMessages,
+              {
+                role: "ASSISTANT",
+                content: latest.answer,
+                sources: latest.sources,
+                followUps: latest.followUps,
+              },
+            ],
+          }));
+          setTimeout(fetchConversations, 600);
+        }
+      );
+    } catch (err: any) {
+      setState((s) => ({
+        ...s,
+        loading: false,
+        error: err.message || "Something went wrong",
+      }));
+    }
+  }, [token, fetchConversations]);
 
   const followUp = useCallback(async (query: string) => {
     if (!token || !state.conversationId || !query.trim()) return;
 
-    // Append user follow-up message immediately
+    const latest = {
+      answer: "",
+      sources: [] as Source[],
+      followUps: [] as string[],
+    };
+
     setState((s) => ({
       ...s,
       query,
@@ -188,21 +200,33 @@ export function useSearch(token: string | null) {
         token,
         state.conversationId,
         query,
-        (chunk) => setState((s) => ({ ...s, answer: chunk })),
-        (sources) => setState((s) => ({ ...s, sources, loading: false })),
-        (followUps) => setState((s) => ({ ...s, followUps }))
+        (chunk) => {
+          latest.answer = chunk;
+          setState((s) => ({ ...s, answer: chunk }));
+        },
+        (sources) => {
+          latest.sources = sources;
+          setState((s) => ({ ...s, sources }));
+          // DO NOT set loading: false here
+        },
+        (followUps) => {
+          latest.followUps = followUps;
+          setState((s) => ({ ...s, followUps }));
+        }
       );
 
-      // Append assistant answer into allMessages once done
+      // Commit to allMessages, clear answer, set loading false — all in one update
       setState((s) => ({
         ...s,
+        answer: "",
+        loading: false,
         allMessages: [
           ...s.allMessages,
           {
             role: "ASSISTANT",
-            content: s.answer,
-            sources: s.sources,
-            followUps: s.followUps,
+            content: latest.answer,
+            sources: latest.sources,
+            followUps: latest.followUps,
           },
         ],
       }));
@@ -222,7 +246,6 @@ export function useSearch(token: string | null) {
     try {
       const conv = await getConversation(token, conversationId);
 
-      // Update cache with full messages
       const cached = readCache();
       const updated = cached.map((c) => c.id === conversationId ? conv : c);
       writeCache(updated);
@@ -230,18 +253,17 @@ export function useSearch(token: string | null) {
 
       const messages = conv.messages;
       const lastUser = [...messages].reverse().find((m) => m.role === "USER");
-      const lastAssistant = [...messages].reverse().find((m) => m.role === "ASSISTANT");
 
-      if (lastUser && lastAssistant) {
+      if (lastUser) {
         setState({
           query: lastUser.content,
-          answer: stripTags(lastAssistant.content),
-          sources: (lastAssistant.sources as Source[]) || [],
-          followUps: extractFollowUps(lastAssistant.content),
+          answer: "",          // ← always empty, allMessages has everything
+          sources: [],
+          followUps: [],
           loading: false,
           error: null,
           conversationId,
-          allMessages: buildAllMessages(messages),  // full history
+          allMessages: buildAllMessages(messages),
         });
       }
     } catch {}
