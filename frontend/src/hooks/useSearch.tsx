@@ -135,6 +135,7 @@ export function useSearch(token: string | null) {
           // Once streaming done, move answer into allMessages
           setState((s) => ({
             ...s,
+            answer: "",
             conversationId: id,
             allMessages: [
               ...s.allMessages,
@@ -152,6 +153,7 @@ export function useSearch(token: string | null) {
     } catch (err: any) {
       setState((s) => ({
         ...s,
+        answer: "",
         loading: false,
         error: err.message || "Something went wrong",
       }));
