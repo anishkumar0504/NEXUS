@@ -1,5 +1,4 @@
 import { createClient } from "@supabase/supabase-js"
-import { useNavigate } from "react-router-dom";
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -7,7 +6,6 @@ const supabase = createClient(
 )
 
 export default function Auth() {
-    const navigate = useNavigate();
  async function login(provider: "google" | "github") {
   const { error } = await supabase.auth.signInWithOAuth({
     provider,

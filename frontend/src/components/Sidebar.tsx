@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import type { Conversation } from "../lib/api";
 
 interface SidebarProps {
@@ -10,7 +9,6 @@ interface SidebarProps {
   onDeleteConversation: (id: string) => void;
   onNewSearch: () => void;
   onSignOut: () => void;
-  onLoad: () => void;
 }
 
 function timeAgo(dateStr: string): string {
@@ -37,11 +35,7 @@ export function Sidebar({
   onDeleteConversation,
   onNewSearch,
   onSignOut,
-  onLoad,
 }: SidebarProps) {
-//   useEffect(() => {
-//     onLoad();
-//   }, []);
 
   const name =
     user?.user_metadata?.full_name ||

@@ -17,7 +17,6 @@ export default function App() {
     loadingConversations,
     search,
     followUp,
-    fetchConversations,
     loadConversation,
     removeConversation,
     newSearch,

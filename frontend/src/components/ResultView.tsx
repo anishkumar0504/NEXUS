@@ -51,7 +51,7 @@ function SourceCard({ source, index }: { source: Source; index: number }) {
 // Simple markdown-like renderer for bold, inline code, numbered lists, bullet points
 function renderAnswer(text: string) {
   const lines = text.split("\n");
-  const elements: JSX.Element[] = [];
+const elements: React.ReactElement[] = [];
   let key = 0;
 
   for (const line of lines) {
@@ -103,10 +103,12 @@ function renderAnswer(text: string) {
   return elements;
 }
 
-function renderInline(text: string): (string | JSX.Element)[] {
+function renderInline(text: string): (string | React.ReactElement)[]
+ {
   // Bold: **text**
   // Code: `text`
-  const parts: (string | JSX.Element)[] = [];
+const parts: (string | React.ReactElement)[] = [];
+
   const regex = /(\*\*(.+?)\*\*|`([^`]+)`)/g;
   let last = 0;
   let match;
@@ -127,10 +129,8 @@ function renderInline(text: string): (string | JSX.Element)[] {
 }
 
 export function ResultView({
-  query,
   answer,
   sources,
-  followUps,
   loading,
   error,
     allMessages, // ADD THIS
