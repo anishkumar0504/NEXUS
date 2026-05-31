@@ -28,6 +28,10 @@ declare global {
     }
   }
 }
+
+app.get("/health", (req, res) => {
+  res.json({ status: "ok" });
+});
 // ─────────────────────────────────────────────
 // Helper: get search results, using DB cache
 // ─────────────────────────────────────────────
