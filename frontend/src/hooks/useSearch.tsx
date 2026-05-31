@@ -136,6 +136,7 @@ export function useSearch(token: string | null) {
           setState((s) => ({
             ...s,
             answer: "",
+                loading: false,  
             conversationId: id,
             allMessages: [
               ...s.allMessages,
