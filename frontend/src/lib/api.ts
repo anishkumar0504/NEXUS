@@ -141,19 +141,19 @@ async function readStream(
   onSources: (sources: Source[]) => void,
   onFollowUps: (followUps: string[]) => void,
   onConversationId: (id: string) => void
-)  {
+) {
   const reader = res.body!.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
   let sourcesReceived = false;
   let answerDone = false;
+  let convIdSent = false; // ← ADD THIS
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
 
-    // Stream answer progressively until sources marker appears
     if (!sourcesReceived && !answerDone) {
       if (buffer.includes("\n<SOURCES>\n")) {
         const [answerPart, rest] = buffer.split("\n<SOURCES>\n");
@@ -169,18 +169,24 @@ async function readStream(
           sourcesReceived = true;
 
           const convMatch = (after || "").match(/<CONV_ID>(.+?)<\/CONV_ID>/);
-          if (convMatch) onConversationId(convMatch[1]);
+          if (convMatch && !convIdSent) { // ← ADD !convIdSent
+            convIdSent = true;
+            onConversationId(convMatch[1]);
+          }
         }
       } else {
-        // ← THIS IS THE KEY FIX: stream partial answer progressively
         const { answer } = parseStructuredAnswer(buffer);
         onChunk(answer);
       }
     }
 
-    if (sourcesReceived && buffer.includes("<CONV_ID>")) {
+    // ← ADD !convIdSent here too
+    if (sourcesReceived && !convIdSent && buffer.includes("<CONV_ID>")) {
       const convMatch = buffer.match(/<CONV_ID>(.+?)<\/CONV_ID>/);
-      if (convMatch) onConversationId(convMatch[1]);
+      if (convMatch) {
+        convIdSent = true;
+        onConversationId(convMatch[1]);
+      }
     }
   }
 
