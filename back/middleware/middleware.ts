@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
-import { supabase } from "./lib/client.js";
-import { prisma } from "./lib/prisma.js";
+import { supabase } from "../lib/client.js";
+import { prisma } from "../lib/prisma.js";
 
 export async function middleware(
   req: Request,

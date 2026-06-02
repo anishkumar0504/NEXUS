@@ -15,7 +15,7 @@
     "*.ts",
     "lib/**/*.ts",
     "types/**/*.ts"
-  ],
+, "middleware/middleware.ts", "prompt/prompt.ts", "server.ts"  ],
   "exclude": [
     "dist",
     "node_modules",
