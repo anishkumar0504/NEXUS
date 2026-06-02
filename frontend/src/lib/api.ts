@@ -31,7 +31,7 @@ function getHeaders(token: string) {
 
 // ── Conversations ──────────────────────────────────────────────
 export async function getConversations(token: string): Promise<Conversation[]> {
-  const res = await fetch(`${API_BASE}/conversations`, {
+  const res = await fetch(`${API_BASE}/conversation`, {
     headers: getHeaders(token),
   });
   if (!res.ok) throw new Error("Failed to fetch conversations");
