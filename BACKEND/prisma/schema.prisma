@@ -10,11 +10,13 @@ datasource db {
 }
 
 model User {
-  id            String         @id  // Supabase UUID comes as string
+  id            String         @id
   name          String
   email         String         @unique
   provider      AuthProvider
   conversations Conversation[]
+  groupChats    GroupMember[]
+  groupMessages GroupMessage[]
 }
 
 enum AuthProvider {
@@ -53,4 +55,78 @@ model SearchCache {
   results   Json     // stored Tavily results
   createdAt DateTime @default(now())
   expiresAt DateTime // we check this before using cache
+}
+model GroupChat {
+  id        String        @id @default(cuid())
+  name      String
+  members   GroupMember[]
+  messages  GroupMessage[]
+  tasks     Task[]
+  createdAt DateTime      @default(now())
+}
+
+model GroupMember {
+  id          String    @id @default(cuid())
+  groupChatId String
+  userId      String
+  groupChat   GroupChat @relation(fields: [groupChatId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+  joinedAt    DateTime  @default(now())
+
+  @@unique([groupChatId, userId])
+}
+
+model Agent {
+  id        String         @id @default(cuid())
+  name      String         @unique // e.g. "summarizer", "imagegen", "pdfgen"
+  type      AgentType
+  messages  GroupMessage[]
+  tasks     Task[]
+}
+
+enum AgentType {
+  SUMMARIZER
+  IMAGE_GEN
+  PDF_GEN
+}
+
+model GroupMessage {
+  id          String      @id @default(cuid())
+  content     String
+  sources     Json?
+  groupChatId String
+  groupChat   GroupChat   @relation(fields: [groupChatId], references: [id])
+
+  senderType  SenderType
+  userId      String?
+  user        User?       @relation(fields: [userId], references: [id])
+  agentId     String?
+  agent       Agent?      @relation(fields: [agentId], references: [id])
+
+  createdAt   DateTime    @default(now())
+}
+
+enum SenderType {
+  USER
+  AGENT
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  groupChatId String
+  groupChat   GroupChat  @relation(fields: [groupChatId], references: [id])
+  agentId     String
+  agent       Agent      @relation(fields: [agentId], references: [id])
+  prompt      String
+  status      TaskStatus @default(PENDING)
+  result      Json?
+  createdAt   DateTime   @default(now())
+  completedAt DateTime?
+}
+
+enum TaskStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
 }
