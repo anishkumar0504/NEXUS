@@ -31,5 +31,5 @@ app.get("/health", (req, res) => {
 app.use("/ask", askRouter);
 app.use("/conversation", conversationsRouter);
 app.get("/conversations", conversationsRouter); // list all
-
+app.post("/group",)
 export { app };
