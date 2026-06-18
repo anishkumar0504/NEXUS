@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "./hooks/useAuth";
 import { useSearch } from "./hooks/useSearch";
+// Import BOTH hooks
+import { useGroupChats } from "./hooks/useGroupChats"; // For the list
+import { ChatPage } from "./pages/Chatpage"; 
 import { Auth } from "./components/Auth";
 import { Sidebar } from "./components/Sidebar";
 import { HomePage } from "./components/HomePage";
@@ -10,6 +13,7 @@ export default function App() {
   const { user, token, loading: authLoading, signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Search State
   const {
     state,
     conversations,
@@ -21,12 +25,33 @@ export default function App() {
     newSearch,
   } = useSearch(token);
 
-  // On mount, check if URL has a conversation ID and load it
+  // Group Chat List State & Hook
+  const {
+    groupChats,
+    loadingGroupChats,
+    createGroupChat,
+    deleteGroupChat,
+    joinGroupChat,
+  } = useGroupChats(token); // Use the plural hook here
+
+  const [activeGroupChatId, setActiveGroupChatId] = useState<string | null>(null);
+
+  // On mount, check if URL has a conversation ID or Group Chat ID
   useEffect(() => {
     if (!token) return;
-    const match = window.location.pathname.match(/^\/c\/(.+)$/);
-    if (match) {
-      loadConversation(match[1]);
+    
+    // Check for standard conversation
+    const convMatch = window.location.pathname.match(/^\/c\/(.+)$/);
+    if (convMatch) {
+      loadConversation(convMatch[1]);
+      setActiveGroupChatId(null);
+      return;
+    }
+
+    // Check for group chat (assuming route /g/:id)
+    const groupMatch = window.location.pathname.match(/^\/g\/(.+)$/);
+    if (groupMatch) {
+      setActiveGroupChatId(groupMatch[1]);
     }
   }, [token]);
 
@@ -37,16 +62,67 @@ export default function App() {
     }
   }, [state.conversationId]);
 
+  // When group chat changes, update the URL
+  useEffect(() => {
+    if (activeGroupChatId) {
+      window.history.pushState({}, "", `/g/${activeGroupChatId}`);
+    } else if (!state.conversationId) {
+       window.history.pushState({}, "", "/");
+    }
+  }, [activeGroupChatId, state.conversationId]);
+
   const handleNewSearch = () => {
     setSidebarOpen(false);
+    setActiveGroupChatId(null);
     window.history.pushState({}, "", "/");
     newSearch();
   };
 
   const handleSelectConversation = (id: string) => {
     setSidebarOpen(false);
+    setActiveGroupChatId(null);
     window.history.pushState({}, "", `/c/${id}`);
     loadConversation(id);
+  };
+
+  // Handlers for Group Chats
+  const handleSelectGroupChat = (id: string) => {
+    setSidebarOpen(false);
+    setActiveGroupChatId(id);
+    window.history.pushState({}, "", `/g/${id}`);
+  };
+
+  const handleCreateGroupChat = async (name: string) => {
+    try {
+      const newChat = await createGroupChat(name);
+      setActiveGroupChatId(newChat.id);
+      window.history.pushState({}, "", `/g/${newChat.id}`);
+    } catch (error) {
+      console.error("Failed to create group chat", error);
+    }
+  };
+
+  const handleJoinGroupChat = async (inviteCode: string) => {
+    try {
+      const joinedChat = await joinGroupChat(inviteCode);
+      setActiveGroupChatId(joinedChat.id);
+      window.history.pushState({}, "", `/g/${joinedChat.id}`);
+    } catch (error) {
+      console.error("Failed to join group chat", error);
+      throw error;
+    }
+  };
+
+  const handleDeleteGroupChat = async (id: string) => {
+    try {
+      await deleteGroupChat(id);
+      if (activeGroupChatId === id) {
+        setActiveGroupChatId(null);
+        window.history.pushState({}, "", "/");
+      }
+    } catch (error) {
+      console.error("Failed to delete group chat", error);
+    }
   };
 
   if (authLoading) {
@@ -64,14 +140,17 @@ export default function App() {
     user.email?.split("@")[0] ||
     "there";
 
-const hasResult = !!(
-  state.query && (
-    state.answer ||
-    state.loading ||
-    state.error ||
-    state.allMessages.length > 0
-  )
-);
+  const hasResult = !!(
+    state.query && (
+      state.answer ||
+      state.loading ||
+      state.error ||
+      state.allMessages.length > 0
+    )
+  );
+
+  const showGroupChat = !!activeGroupChatId;
+
   return (
     <div className="app">
       <button
@@ -87,8 +166,9 @@ const hasResult = !!(
       </button>
 
       <Sidebar
+        // Existing Props
         conversations={conversations}
-        loading={loadingConversations}
+        loadingConversations={loadingConversations}
         activeConversationId={state.conversationId}
         user={user}
         onSelectConversation={handleSelectConversation}
@@ -97,10 +177,29 @@ const hasResult = !!(
         onSignOut={signOut}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        
+        // New Group Chat Props
+        groupChats={groupChats}
+        loadingGroupChats={loadingGroupChats}
+        activeGroupChatId={activeGroupChatId}
+        onSelectGroupChat={handleSelectGroupChat}
+        onDeleteGroupChat={handleDeleteGroupChat}
+        onCreateGroupChat={handleCreateGroupChat}
+        onJoinGroupChat={handleJoinGroupChat}
       />
 
       <main className="main-content">
-        {hasResult ? (
+        {showGroupChat ? (
+          <ChatPage 
+            groupChatId={activeGroupChatId} 
+            token={token} 
+            currentUserId={user.id} 
+            onBack={() => {
+              setActiveGroupChatId(null);
+              window.history.pushState({}, "", "/");
+            }}
+          />
+        ) : hasResult ? (
           <ResultView
             query={state.query}
             answer={state.answer}
