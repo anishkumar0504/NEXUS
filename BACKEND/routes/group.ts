@@ -1,22 +1,21 @@
-import router from "express";
+import express from "express";
+import { middleware } from "../middleware/middleware.js";
+import {
+  createGroup,
+  joinGroup,
+  getGroup,
+  postMessage,
+  getMessages,
+} from "../controllers/groupController.js";
 
-const groupRouter = router();
+const groupRouter = express.Router();
 
-groupRouter.post("/", async (req, res) => {
-  // Handle group creation logic here
-  res.status(201).json({ message: "Group created successfully" });
-});
+groupRouter.use(middleware);
 
-groupRouter.get("/:groupId", async (req, res) => {
-  const { groupId } = req.params;
-    // Handle fetching group details logic here
-    res.status(200).json({ message: `Details for group ${groupId}` });
-});
+groupRouter.post("/", createGroup);
+groupRouter.post("/:groupId/join", joinGroup);
+groupRouter.get("/:groupId", getGroup);
+groupRouter.post("/:groupId/message", postMessage);
+groupRouter.get("/:groupId/messages", getMessages);
 
-groupRouter.post("/:groupId/message", async (req, res) => {
-  const { groupId } = req.params;
-  const { message } = req.body;
-    // Handle sending a message to the group logic here
-    res.status(201).json({ message: `Message sent to group ${groupId}` });
-});
-
+export default groupRouter;
