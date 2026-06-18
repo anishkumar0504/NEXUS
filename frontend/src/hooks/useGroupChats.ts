@@ -13,7 +13,7 @@ export interface UseGroupChatsReturn {
   error: string | null;
   createGroupChat: (name: string) => Promise<GroupChat>;
   deleteGroupChat: (id: string) => Promise<void>;
-  joinGroupChat: (inviteCode: string) => Promise<GroupChat>;
+  joinGroupChat: (groupId: string) => Promise<void>; // Changed to void as we refresh list
   refresh: () => void;
 }
 
@@ -53,15 +53,14 @@ export function useGroupChats(token: string | null): UseGroupChatsReturn {
     setGroupChats((prev) => prev.filter((c) => c.id !== id));
   };
 
-  const handleJoin = async (inviteCode: string) => {
+  const handleJoin = async (groupId: string) => {
     if (!token) throw new Error("Not authenticated");
-    const joinedChat = await joinGroupChat(token, inviteCode);
-    // Avoid duplicates if already in list
-    setGroupChats((prev) => {
-      if (prev.some((c) => c.id === joinedChat.id)) return prev;
-      return [...prev, joinedChat];
-    });
-    return joinedChat;
+    
+    // joinGroupChat now returns { message, groupId }, not the full chat object
+    await joinGroupChat(token, groupId);
+    
+    // Refresh the entire list to get the newly joined group with full details (members, etc.)
+    await fetchChats();
   };
 
   return {

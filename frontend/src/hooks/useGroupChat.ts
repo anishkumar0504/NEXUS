@@ -3,11 +3,10 @@ import { io, Socket } from "socket.io-client";
 import {
   buildInviteLink,
   getGroupChat,
+  getGroupMessages,
   type GroupChat,
   type GroupMessage,
 } from "../lib/groupchat";
-
-// const SOCKET_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 const SOCKET_URL = "http://localhost:3000";
 
@@ -49,11 +48,15 @@ export function useGroupChat(
     setLoading(true);
     setError(null);
 
-    getGroupChat(token, groupChatId)
-      .then((data) => {
+    // Fetch both group details and messages in parallel
+    Promise.all([
+      getGroupChat(token, groupChatId),
+      getGroupMessages(token, groupChatId)
+    ])
+      .then(([groupData, messagesData]) => {
         if (cancelled) return;
-        setChat(data);
-        setMessages(data.messages ?? []);
+        setChat(groupData);
+        setMessages(messagesData);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -133,8 +136,11 @@ export function useGroupChat(
 
   // ── Copy invite link ─────────────────────────────────────────
   const copyInviteLink = useCallback(async () => {
-    if (!chat?.inviteCode) return;
-    const link = buildInviteLink(chat.inviteCode);
+    if (!chat?.id) return;
+    
+    // Use chat.id instead of inviteCode
+    const link = buildInviteLink(chat.id);
+    
     try {
       await navigator.clipboard.writeText(link);
       setInviteCopied(true);

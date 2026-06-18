@@ -341,10 +341,10 @@ export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPage
               {chat.members.slice(0, 4).map((m: GroupMember, i: number) => (
                 <div
                   key={m.id}
-                  title={m.name}
+title={m.user.name}
                   style={{ marginLeft: i === 0 ? 0 : -8, zIndex: 4 - i }}
                 >
-                  <Avatar name={m.name} userId={m.id} size={28} />
+                  <Avatar name={m.user.name} userId={m.id} size={28} />
                 </div>
               ))}
               {chat.members.length > 4 && (

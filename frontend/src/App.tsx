@@ -103,11 +103,14 @@ export default function App() {
     }
   };
 
-  const handleJoinGroupChat = async (inviteCode: string) => {
+  const handleJoinGroupChat = async (groupId: string) => {
     try {
-      const joinedChat = await joinGroupChat(inviteCode);
-      setActiveGroupChatId(joinedChat.id);
-      window.history.pushState({}, "", `/g/${joinedChat.id}`);
+      // joinGroupChat now returns void and handles refreshing the list internally
+      await joinGroupChat(groupId);
+      
+      // Use the groupId we already have instead of joinedChat.id
+      setActiveGroupChatId(groupId);
+      window.history.pushState({}, "", `/g/${groupId}`);
     } catch (error) {
       console.error("Failed to join group chat", error);
       throw error;

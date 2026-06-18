@@ -1,8 +1,11 @@
+// src/lib/groupchat.ts
+
 const API_BASE = "http://localhost:3000/groups";
 
 export interface GroupMember {
   id: string;
   userId: string;
+  groupChatId: string;
   user: {
     id: string;
     name: string;
@@ -40,8 +43,6 @@ export interface GroupChat {
   name: string;
   createdAt: string;
   members: GroupMember[];
-  // Note: The getGroup route doesn't explicitly include messages in the Prisma query,
-  // so we might need to fetch them separately via getMessages
 }
 
 function getHeaders(token: string) {
@@ -51,20 +52,10 @@ function getHeaders(token: string) {
   };
 }
 
-// ── Group Management ────────────────────────────────────────────────
+// ── Group Chats ────────────────────────────────────────────────
 
-/**
- * Fetches all groups the user is a member of.
- * Note: Your backend routes don't show a "list all groups" endpoint.
- * If you have one, update the URL below. Otherwise, this might need to be removed 
- * or implemented on the backend.
- */
 export async function getGroupChats(token: string): Promise<GroupChat[]> {
-  // Assuming there is a GET /groups endpoint that lists user's groups. 
-  // If not, you might need to add it to your backend.
-  // For now, pointing to root which usually implies list in REST, 
-  // but your router only has POST / (create). 
-  // You might need to add: groupRouter.get("/", getUserGroups);
+  // NOTE: Ensure you have a GET /groups route on your backend that returns { groups: [] }
   const res = await fetch(`${API_BASE}`, {
     headers: getHeaders(token),
   });
@@ -99,9 +90,22 @@ export async function createGroupChat(
   return data.group;
 }
 
+// If you don't have a delete route yet, you can comment this out or implement it later
+export async function deleteGroupChat(
+  token: string,
+  groupId: string
+): Promise<void> {
+  // Assuming a DELETE /groups/:groupId route exists
+  const res = await fetch(`${API_BASE}/${groupId}`, {
+    method: "DELETE",
+    headers: getHeaders(token),
+  });
+  if (!res.ok) throw new Error("Failed to delete group chat");
+}
+
 /**
  * Joins a group using its ID.
- * Note: Your backend route is POST /:groupId/join
+ * Returns the response from the backend which includes groupId.
  */
 export async function joinGroupChat(
   token: string,
@@ -113,7 +117,7 @@ export async function joinGroupChat(
   });
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || "Failed to join group");
+    throw new Error(error.error || "Invalid invite code or group ID");
   }
   const data = await res.json();
   return data;
@@ -133,10 +137,6 @@ export async function getGroupMessages(
   return data.messages;
 }
 
-/**
- * Posts a message to a group.
- * Returns a tempId for optimistic UI updates.
- */
 export async function postGroupMessage(
   token: string,
   groupId: string,
@@ -153,4 +153,10 @@ export async function postGroupMessage(
   }
   const data = await res.json();
   return data;
+}
+
+// Helper for invite links if you still want to support them via URL params
+export function buildInviteLink(groupId: string): string {
+  const base = window.location.origin;
+  return `${base}/join/${groupId}`;
 }
