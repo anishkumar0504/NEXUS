@@ -6,7 +6,7 @@ import cors from "cors";
 import askRouter from "../routes/ask.js";
 import conversationsRouter from "../routes/conversations.js";
 import { startKeepAlive } from "../lib/keepAlive.js";
-
+import groupRouter from "../routes/group.js";
 declare global {
   namespace Express {
     interface Request {
@@ -31,5 +31,5 @@ app.get("/health", (req, res) => {
 app.use("/ask", askRouter);
 app.use("/conversation", conversationsRouter);
 app.get("/conversations", conversationsRouter); // list all
-app.post("/group",)
+app.use("/groups", groupRouter);
 export { app };
