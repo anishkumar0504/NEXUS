@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useAuth } from "./hooks/useAuth";
 import { useSearch } from "./hooks/useSearch";
 // Import BOTH hooks
-import { useGroupChats } from "./hooks/useGroupChats"; // For the list
+import { 
+  useGroupChats } from "./hooks/useGroupChats"; // For the list
 import { ChatPage } from "./pages/Chatpage"; 
 import { Auth } from "./components/Auth";
 import { Sidebar } from "./components/Sidebar";
