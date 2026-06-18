@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useGroupChat } from "../hooks/useGroupChat";
-import type { GroupMessage } from "../lib/groupchat";
+import { useGroupChat } from "../hooks/useGroupChat"; 
+import type { GroupMessage, GroupMember } from "../lib/groupchat";
 
 // ── Tiny helpers ─────────────────────────────────────────────────────────────
 
@@ -338,7 +338,7 @@ export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPage
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {chat?.members && chat.members.length > 0 && (
             <div className="chat-member-stack">
-              {chat.members.slice(0, 4).map((m, i) => (
+              {chat.members.slice(0, 4).map((m: GroupMember, i: number) => (
                 <div
                   key={m.id}
                   title={m.name}
@@ -423,7 +423,7 @@ export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPage
         )}
 
         {!loading &&
-          messages.map((msg, idx) => (
+          messages.map((msg: GroupMessage, idx: number) => (
             <MessageBubble
               key={msg.id}
               msg={msg}
