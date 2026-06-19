@@ -1,7 +1,8 @@
+// server/messagePipeline.ts
 import { prisma } from "./lib/prisma.js";
 import { redisCache } from "./redis/redis.js";
 
-const CACHE_TTL_SECONDS = 60 * 10; // 10 min — recent messages, not source of truth
+const CACHE_TTL_SECONDS = 60 * 10;
 const CACHE_MAX_MESSAGES = 50;
 const BROADCAST_CHANNEL_PREFIX = "group-broadcast:";
 
@@ -9,12 +10,14 @@ export interface PipelineMessage {
   tempId: string;
   groupId: string;
   content: string;
-  senderType: "USER" | "AGENT";
+  senderType: "USER" | "AGENT" | "SYSTEM";
   userId?: string;
   agentId?: string;
   createdAt: string;
-  id?: string; // present once persisted
+  id?: string;
   pending?: boolean;
+  user?: any;      // ← added for broadcast
+  agent?: any;     // ← added for broadcast
 }
 
 function cacheKey(groupId: string) {
@@ -45,24 +48,29 @@ export async function persistMessage(message: PipelineMessage) {
   });
 }
 
-/**
- * The discussed flow: queue -> cache -> broadcast -> db.
- * The "queue" hop already happened before this runs (it's the job that
- * triggered the worker). This function does the remaining three steps,
- * in order, then fires a second lightweight broadcast once the db write
- * confirms, swapping the optimistic tempId for the real db id.
- */
 export async function runMessagePipeline(message: PipelineMessage) {
+  // 1. Pending
   await cacheMessage({ ...message, pending: true });
   await broadcastMessage({ ...message, pending: true });
 
+  // 2. Persist
   const saved = await persistMessage(message);
 
+  // 3. Fetch full record with relations for broadcast
+  const fullMessage = await prisma.groupMessage.findUnique({
+    where: { id: saved.id },
+    include: { user: true, agent: true },
+  });
+
+  // 4. Confirmed — include user/agent so frontend can render name/avatar
   const confirmed: PipelineMessage = {
     ...message,
     id: saved.id,
     pending: false,
+    user: fullMessage?.user ?? null,
+    agent: fullMessage?.agent ?? null,
   };
+
   await cacheMessage(confirmed);
   await broadcastMessage(confirmed);
 

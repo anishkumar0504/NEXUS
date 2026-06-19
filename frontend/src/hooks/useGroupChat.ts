@@ -4,7 +4,7 @@ import {
   buildInviteLink,
   getGroupChat,
   getGroupMessages,
-  postGroupMessage,  // ← ADDED
+  postGroupMessage, // ← ADDED
   type GroupChat,
   type GroupMember,
   type GroupMessage,
@@ -62,12 +62,32 @@ export function useGroupChat(
       .then(([groupData, messagesData]) => {
         if (cancelled) return;
         setChat(groupData);
+
+        // Merge: DB data is source of truth. Socket messages that arrived
+        // while loading are merged in, but pending optimistics (tempId as id)
+        // are replaced by their confirmed DB counterparts.
         setMessages((prev) => {
           if (prev.length === 0) return messagesData;
-          const byId = new Map(messagesData.map((m) => [m.id, m]));
+
+          const byId = new Map<string, GroupMessage>();
+
+          // DB messages first (source of truth, have user/agent)
+          for (const m of messagesData) byId.set(m.id, m);
+
+          // Merge socket messages: skip if already in DB by real id,
+          // but also check if any pending message's tempId matches a DB message
           for (const m of prev) {
+            const mTempId = (m as any).tempId;
+            // If this pending message's tempId matches a DB message's tempId,
+            // the DB version already replaced it — skip
+            const alreadyConfirmed = Array.from(byId.values()).some(
+              (dbm) => (dbm as any).tempId === mTempId
+            );
+            if (alreadyConfirmed) continue;
+
             if (!byId.has(m.id)) byId.set(m.id, m);
           }
+
           return Array.from(byId.values()).sort(
             (a, b) =>
               new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
@@ -100,27 +120,33 @@ export function useGroupChat(
 
     socket.on("connect", () => {
       setConnected(true);
-      socket.emit("join-group", groupChatId);  // ← FIXED: kebab-case, string payload
+      socket.emit("join-group", groupChatId); // ← FIXED: kebab-case, string
     });
 
     socket.on("disconnect", () => {
       setConnected(false);
     });
 
-    // Unified handler for all message events
     const handleMessage = (msg: GroupMessage & { tempId?: string }) => {
       setMessages((prev) => {
-        // Reconcile: replace optimistic message with matching tempId
-        const optimisticIdx = prev.findIndex((m) => (m as any).tempId === msg.tempId);
-        if (optimisticIdx !== -1) {
+        // 1. Reconcile: if this confirmed message matches a pending optimistic
+        //    by tempId, replace the pending one (don't append).
+        const pendingIdx = prev.findIndex(
+          (m) => (m as any).tempId && (m as any).tempId === msg.tempId
+        );
+        if (pendingIdx !== -1) {
           const next = [...prev];
-          next[optimisticIdx] = msg;
+          next[pendingIdx] = msg;
           return next;
         }
-        // Deduplicate by real id
+
+        // 2. Deduplicate by real id
         if (prev.some((m) => m.id === msg.id)) return prev;
+
+        // 3. New message — append and sort
         return [...prev, msg].sort(
-          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          (a, b) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         );
       });
 
@@ -135,7 +161,7 @@ export function useGroupChat(
     };
 
     socket.on("new-message", handleMessage);
-    socket.on("group_message", handleMessage);  // Backwards compat for any legacy emits
+    socket.on("group_message", handleMessage); // ← backwards compat for joinGroup
 
     socket.on("member_joined", ({ member }: { member: GroupMember }) => {
       setChat((prev) => {
@@ -155,7 +181,7 @@ export function useGroupChat(
     });
 
     return () => {
-      socket.emit("leave-group", groupChatId);  // ← FIXED: kebab-case, string payload
+      socket.emit("leave-group", groupChatId); // ← FIXED: kebab-case, string
       socket.disconnect();
       socketRef.current = null;
       setConnected(false);
@@ -168,12 +194,14 @@ export function useGroupChat(
       if (!groupChatId || !token || !content.trim()) return;
 
       const tempId = crypto.randomUUID();
+
+      // Build optimistic message with tempId stored for reconciliation
       const optimisticMsg: GroupMessage & { tempId: string } = {
-        id: tempId,
+        id: tempId, // use tempId as id initially so React key is stable
         tempId,
         content: content.trim(),
         sources: null,
-        groupChatId: groupChatId,
+        groupChatId,
         senderType: "USER",
         userId: currentUserIdRef.current,
         agentId: null,
@@ -192,11 +220,14 @@ export function useGroupChat(
 
       try {
         await postGroupMessage(token, groupChatId, content.trim());
-        // Fallback: clear sending state after 3s if socket event is delayed
+        // Fallback: if socket event is delayed/missed, clear sending after 3s
         setTimeout(() => setSending(false), 3000);
       } catch (err: any) {
         setError(err.message || "Failed to send message");
-        setMessages((prev) => prev.filter((m) => (m as any).tempId !== tempId));
+        // Remove optimistic message on failure
+        setMessages((prev) =>
+          prev.filter((m) => (m as any).tempId !== tempId)
+        );
         setSending(false);
       }
     },
