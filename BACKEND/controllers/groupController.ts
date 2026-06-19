@@ -40,7 +40,6 @@ export async function joinGroup(req: Request, res: Response) {
           groupChatId: groupId,
           senderType: "SYSTEM",
           content: "joined the group",
-          // store userId so the frontend can render "Anish joined" using the name
           userId: req.userId!,
         },
         include: { user: true },
@@ -48,8 +47,9 @@ export async function joinGroup(req: Request, res: Response) {
     ]);
 
     const io = req.app.get("io");
-    io.to(groupId).emit("member_joined", { member, groupId });
-    io.to(groupId).emit("group_message", systemMessage);
+    // FIXED: Use group:${groupId} room to match socketBridge
+    io.to(`group:${groupId}`).emit("member_joined", { member, groupId });
+    io.to(`group:${groupId}`).emit("new-message", systemMessage);
   }
 
   res.status(200).json({ message: "Joined group", groupId });
@@ -85,10 +85,6 @@ export async function postMessage(req: Request, res: Response) {
 
   const tempId = randomUUID();
 
-  // Hands off to messageWorker, which does cache -> broadcast -> db save,
-  // then fans out any @mentions to the agent queue. Nothing here touches
-  // Postgres or calls an agent, so this response is fast regardless of
-  // how slow @imagegen or the db are.
   await messageQueue.add("ingest-message", {
     groupId,
     content,
@@ -97,8 +93,6 @@ export async function postMessage(req: Request, res: Response) {
     tempId,
   });
 
-  // Client renders optimistically using tempId, then reconciles against
-  // the "new-message" socket event the worker publishes a moment later.
   res.status(202).json({ status: "queued", tempId });
 }
 
@@ -148,7 +142,6 @@ export async function getUserGroups(req: Request, res: Response) {
     },
   });
 
-  // Sort groups by their most recent message
   const sortedGroups = groups.sort((a, b) => {
     const aLastMessage = a.messages[0]?.createdAt;
     const bLastMessage = b.messages[0]?.createdAt;

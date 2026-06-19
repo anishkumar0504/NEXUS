@@ -1,10 +1,10 @@
-//useGroupChat
 import { useCallback, useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import {
   buildInviteLink,
   getGroupChat,
   getGroupMessages,
+  postGroupMessage,  // ← ADDED
   type GroupChat,
   type GroupMember,
   type GroupMessage,
@@ -40,8 +40,6 @@ export function useGroupChat(
   const [inviteCopied, setInviteCopied] = useState(false);
 
   const socketRef = useRef<Socket | null>(null);
-  // mirrors currentUserId so the socket handler (set up once per groupChatId/token)
-  // always sees the latest value without needing to be in its effect deps
   const currentUserIdRef = useRef(currentUserId);
   currentUserIdRef.current = currentUserId;
 
@@ -57,7 +55,6 @@ export function useGroupChat(
     setLoading(true);
     setError(null);
 
-    // Fetch both group details and messages in parallel
     Promise.all([
       getGroupChat(token, groupChatId),
       getGroupMessages(token, groupChatId),
@@ -65,10 +62,6 @@ export function useGroupChat(
       .then(([groupData, messagesData]) => {
         if (cancelled) return;
         setChat(groupData);
-        // Merge, don't overwrite — the socket connects in a separate effect and
-        // may have already delivered messages (e.g. a join system message,
-        // or a teammate's message) before this REST call resolves. A plain
-        // overwrite here would silently drop those.
         setMessages((prev) => {
           if (prev.length === 0) return messagesData;
           const byId = new Map(messagesData.map((m) => [m.id, m]));
@@ -95,13 +88,6 @@ export function useGroupChat(
   }, [groupChatId, token]);
 
   // ── Socket.IO connection ─────────────────────────────────────
-  // Connects as soon as we have groupChatId + token. We no longer gate on
-  // `loading` here — using a state value that can toggle more than once as
-  // an effect dependency caused the socket to be torn down and recreated
-  // whenever `loading` flipped again later, leaving a stale/disconnected
-  // socket in socketRef while the UI still showed "Live". The merge logic
-  // in the fetch effect above is what actually protects against the
-  // REST-vs-socket ordering race, so this gate was redundant anyway.
   useEffect(() => {
     if (!groupChatId || !token) return;
 
@@ -114,19 +100,28 @@ export function useGroupChat(
 
     socket.on("connect", () => {
       setConnected(true);
-      socket.emit("join_group", { groupChatId });
+      socket.emit("join-group", groupChatId);  // ← FIXED: kebab-case, string payload
     });
 
     socket.on("disconnect", () => {
       setConnected(false);
     });
 
-    // New message from any user, agent, or system event (e.g. "joined the group")
-    socket.on("group_message", (msg: GroupMessage) => {
+    // Unified handler for all message events
+    const handleMessage = (msg: GroupMessage & { tempId?: string }) => {
       setMessages((prev) => {
-        // Deduplicate by id
+        // Reconcile: replace optimistic message with matching tempId
+        const optimisticIdx = prev.findIndex((m) => (m as any).tempId === msg.tempId);
+        if (optimisticIdx !== -1) {
+          const next = [...prev];
+          next[optimisticIdx] = msg;
+          return next;
+        }
+        // Deduplicate by real id
         if (prev.some((m) => m.id === msg.id)) return prev;
-        return [...prev, msg];
+        return [...prev, msg].sort(
+          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
       });
 
       if (msg.senderType === "AGENT") {
@@ -135,14 +130,13 @@ export function useGroupChat(
         msg.senderType === "USER" &&
         msg.userId === currentUserIdRef.current
       ) {
-        // our own message round-tripped back — stop the "sending" state
         setSending(false);
       }
-    });
+    };
 
-    // A new member joined — live-patch the member list / avatar stack.
-    // The "X joined the group" line in the timeline arrives separately
-    // via the group_message (SYSTEM) event above.
+    socket.on("new-message", handleMessage);
+    socket.on("group_message", handleMessage);  // Backwards compat for any legacy emits
+
     socket.on("member_joined", ({ member }: { member: GroupMember }) => {
       setChat((prev) => {
         if (!prev) return prev;
@@ -151,7 +145,6 @@ export function useGroupChat(
       });
     });
 
-    // Agent is working (typing indicator) — independent of our own send state
     socket.on("agent_thinking", () => {
       setAgentThinking(true);
     });
@@ -162,7 +155,7 @@ export function useGroupChat(
     });
 
     return () => {
-      socket.emit("leave_group", { groupChatId });
+      socket.emit("leave-group", groupChatId);  // ← FIXED: kebab-case, string payload
       socket.disconnect();
       socketRef.current = null;
       setConnected(false);
@@ -171,25 +164,43 @@ export function useGroupChat(
 
   // ── Send message ─────────────────────────────────────────────
   const sendMessage = useCallback(
-    (content: string) => {
-      const socket = socketRef.current;
-      if (!socket || !groupChatId || !content.trim()) return;
+    async (content: string) => {
+      if (!groupChatId || !token || !content.trim()) return;
 
-      if (!socket.connected) {
-        // Ref exists but the underlying connection is gone/stale — this is
-        // the bug that caused silent no-op sends. Surface it instead of
-        // swallowing it, and let socket.io's own reconnection logic catch up.
-        console.warn("[useGroupChat] sendMessage called on a disconnected socket; dropping", {
-          socketId: socket.id,
-        });
-        setError("Connection lost — reconnecting, please try again in a moment.");
-        return;
-      }
+      const tempId = crypto.randomUUID();
+      const optimisticMsg: GroupMessage & { tempId: string } = {
+        id: tempId,
+        tempId,
+        content: content.trim(),
+        sources: null,
+        groupChatId: groupChatId,
+        senderType: "USER",
+        userId: currentUserIdRef.current,
+        agentId: null,
+        createdAt: new Date().toISOString(),
+        user: {
+          id: currentUserIdRef.current!,
+          name: "You",
+          email: "",
+          provider: "",
+        },
+        agent: null,
+      };
 
+      setMessages((prev) => [...prev, optimisticMsg]);
       setSending(true);
-      socket.emit("send_message", { groupChatId, content: content.trim() });
+
+      try {
+        await postGroupMessage(token, groupChatId, content.trim());
+        // Fallback: clear sending state after 3s if socket event is delayed
+        setTimeout(() => setSending(false), 3000);
+      } catch (err: any) {
+        setError(err.message || "Failed to send message");
+        setMessages((prev) => prev.filter((m) => (m as any).tempId !== tempId));
+        setSending(false);
+      }
     },
-    [groupChatId]
+    [groupChatId, token]
   );
 
   // ── Copy invite link ─────────────────────────────────────────
@@ -203,7 +214,6 @@ export function useGroupChat(
       setInviteCopied(true);
       setTimeout(() => setInviteCopied(false), 2000);
     } catch {
-      // Fallback for older browsers / non-HTTPS
       const ta = document.createElement("textarea");
       ta.value = link;
       ta.style.position = "fixed";

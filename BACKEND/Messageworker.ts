@@ -14,7 +14,7 @@ export const messageWorker = new Worker<MessageJobData>(
       tempId,
       groupId,
       content,
-      senderType,
+      senderType, 
       userId,
       agentId,
       createdAt: new Date().toISOString(),
