@@ -290,6 +290,8 @@ export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPage
   }
 
   function handleSend() {
+      console.log("[ChatPage] handleSend fired, draft:", draft);
+
     if (!draft.trim()) return;
     sendMessage(draft);
     setDraft("");

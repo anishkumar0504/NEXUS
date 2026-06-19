@@ -30,9 +30,26 @@ export async function joinGroup(req: Request, res: Response) {
   });
 
   if (!existing) {
-    await prisma.groupMember.create({
-      data: { groupChatId: groupId, userId: req.userId! },
-    });
+    const [member, systemMessage] = await prisma.$transaction([
+      prisma.groupMember.create({
+        data: { groupChatId: groupId, userId: req.userId! },
+        include: { user: true },
+      }),
+      prisma.groupMessage.create({
+        data: {
+          groupChatId: groupId,
+          senderType: "SYSTEM",
+          content: "joined the group",
+          // store userId so the frontend can render "Anish joined" using the name
+          userId: req.userId!,
+        },
+        include: { user: true },
+      }),
+    ]);
+
+    const io = req.app.get("io");
+    io.to(groupId).emit("member_joined", { member, groupId });
+    io.to(groupId).emit("group_message", systemMessage);
   }
 
   res.status(200).json({ message: "Joined group", groupId });
@@ -100,4 +117,48 @@ export async function getMessages(req: Request, res: Response) {
   });
 
   res.status(200).json({ messages });
+}
+
+export async function getUserGroups(req: Request, res: Response) {
+  const groups = await prisma.groupChat.findMany({
+    where: {
+      members: {
+        some: {
+          userId: req.userId!,
+        },
+      },
+    },
+    include: {
+      members: {
+        include: {
+          user: true,
+        },
+      },
+      _count: {
+        select: {
+          messages: true,
+        },
+      },
+      messages: {
+        orderBy: {
+          createdAt: 'desc',
+        },
+        take: 1,
+      },
+    },
+  });
+
+  // Sort groups by their most recent message
+  const sortedGroups = groups.sort((a, b) => {
+    const aLastMessage = a.messages[0]?.createdAt;
+    const bLastMessage = b.messages[0]?.createdAt;
+    
+    if (!aLastMessage && !bLastMessage) return 0;
+    if (!aLastMessage) return 1;
+    if (!bLastMessage) return -1;
+    
+    return new Date(bLastMessage).getTime() - new Date(aLastMessage).getTime();
+  });
+
+  res.status(200).json({ groups: sortedGroups });
 }

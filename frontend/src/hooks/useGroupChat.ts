@@ -166,16 +166,19 @@ export function useGroupChat(
   }, [groupChatId, token, loading]);
 
   // ── Send message ─────────────────────────────────────────────
-  const sendMessage = useCallback(
-    (content: string) => {
-      const socket = socketRef.current;
-      if (!socket || !groupChatId || !content.trim()) return;
-
-      setSending(true);
-      socket.emit("send_message", { groupChatId, content: content.trim() });
-    },
-    [groupChatId]
-  );
+ const sendMessage = useCallback(
+  (content: string) => {
+    const socket = socketRef.current;
+    console.log("[useGroupChat] sendMessage called, socket:", !!socket, "groupChatId:", groupChatId);
+    if (!socket || !groupChatId || !content.trim()) {
+      console.log("[useGroupChat] sendMessage bailed out early");
+      return;
+    }
+    setSending(true);
+    socket.emit("send_message", { groupChatId, content: content.trim() });
+  },
+  [groupChatId]
+);
 
   // ── Copy invite link ─────────────────────────────────────────
   const copyInviteLink = useCallback(async () => {

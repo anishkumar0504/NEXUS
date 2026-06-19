@@ -109,8 +109,8 @@ model GroupMessage {
 enum SenderType {
   USER
   AGENT
+  SYSTEM
 }
-
 model Task {
   id          String     @id @default(cuid())
   groupChatId String

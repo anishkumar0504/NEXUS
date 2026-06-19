@@ -6,11 +6,13 @@ import {
   getGroup,
   postMessage,
   getMessages,
+   getUserGroups,
 } from "../controllers/groupController.js";
 
 const groupRouter = express.Router();
 
 groupRouter.use(middleware);
+groupRouter.get("/", getUserGroups); // New route - place before parameterized routes
 
 groupRouter.post("/", createGroup);
 groupRouter.post("/:groupId/join", joinGroup);

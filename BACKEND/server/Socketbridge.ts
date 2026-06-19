@@ -1,6 +1,6 @@
 import { Server as HttpServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
-import { redisSub } from "./redis.js";
+import { redisSub } from "../redis/redis.js";
 
 let io: SocketIOServer;
 
