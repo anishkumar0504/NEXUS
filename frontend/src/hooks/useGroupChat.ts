@@ -95,11 +95,15 @@ export function useGroupChat(
   }, [groupChatId, token]);
 
   // ── Socket.IO connection ─────────────────────────────────────
-  // Waits for `loading` to clear so join_group fires after initial history
-  // is in state — avoids the race where a live event arrives before the
-  // REST snapshot does (the merge above is a second line of defense).
+  // Connects as soon as we have groupChatId + token. We no longer gate on
+  // `loading` here — using a state value that can toggle more than once as
+  // an effect dependency caused the socket to be torn down and recreated
+  // whenever `loading` flipped again later, leaving a stale/disconnected
+  // socket in socketRef while the UI still showed "Live". The merge logic
+  // in the fetch effect above is what actually protects against the
+  // REST-vs-socket ordering race, so this gate was redundant anyway.
   useEffect(() => {
-    if (!groupChatId || !token || loading) return;
+    if (!groupChatId || !token) return;
 
     const socket = io(SOCKET_URL, {
       auth: { token },
@@ -163,22 +167,30 @@ export function useGroupChat(
       socketRef.current = null;
       setConnected(false);
     };
-  }, [groupChatId, token, loading]);
+  }, [groupChatId, token]);
 
   // ── Send message ─────────────────────────────────────────────
- const sendMessage = useCallback(
-  (content: string) => {
-    const socket = socketRef.current;
-    console.log("[useGroupChat] sendMessage called, socket:", !!socket, "groupChatId:", groupChatId);
-    if (!socket || !groupChatId || !content.trim()) {
-      console.log("[useGroupChat] sendMessage bailed out early");
-      return;
-    }
-    setSending(true);
-    socket.emit("send_message", { groupChatId, content: content.trim() });
-  },
-  [groupChatId]
-);
+  const sendMessage = useCallback(
+    (content: string) => {
+      const socket = socketRef.current;
+      if (!socket || !groupChatId || !content.trim()) return;
+
+      if (!socket.connected) {
+        // Ref exists but the underlying connection is gone/stale — this is
+        // the bug that caused silent no-op sends. Surface it instead of
+        // swallowing it, and let socket.io's own reconnection logic catch up.
+        console.warn("[useGroupChat] sendMessage called on a disconnected socket; dropping", {
+          socketId: socket.id,
+        });
+        setError("Connection lost — reconnecting, please try again in a moment.");
+        return;
+      }
+
+      setSending(true);
+      socket.emit("send_message", { groupChatId, content: content.trim() });
+    },
+    [groupChatId]
+  );
 
   // ── Copy invite link ─────────────────────────────────────────
   const copyInviteLink = useCallback(async () => {
