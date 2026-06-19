@@ -13,7 +13,7 @@ export interface UseGroupChatsReturn {
   error: string | null;
   createGroupChat: (name: string) => Promise<GroupChat>;
   deleteGroupChat: (id: string) => Promise<void>;
-  joinGroupChat: (groupId: string) => Promise<void>; // Changed to void as we refresh list
+  joinGroupChat: (groupId: string) => Promise<void>;
   refresh: () => void;
 }
 
@@ -40,27 +40,79 @@ export function useGroupChats(token: string | null): UseGroupChatsReturn {
     fetchChats();
   }, [fetchChats]);
 
+  // ✅ Optimistic Create
   const handleCreate = async (name: string) => {
     if (!token) throw new Error("Not authenticated");
-    const newChat = await createGroupChat(token, name);
-    setGroupChats((prev) => [...prev, newChat]);
-    return newChat;
+
+    // 1. Generate temp ID & add immediately
+    const tempId = crypto.randomUUID();
+    const optimisticChat: GroupChat = {
+      id: tempId,
+      name,
+      members: [], // Placeholder
+      _count: { messages: 0 },
+      createdAt: new Date().toISOString(),
+    } as unknown as GroupChat;
+
+    setGroupChats((prev) => [optimisticChat, ...prev]);
+
+    try {
+      const realChat = await createGroupChat(token, name);
+      // 2. Replace optimistic with real data from server
+      setGroupChats((prev) =>
+        prev.map((c) => (c.id === tempId ? realChat : c))
+      );
+      return realChat;
+    } catch (err) {
+      // 3. Rollback on failure
+      setGroupChats((prev) => prev.filter((c) => c.id !== tempId));
+      throw err;
+    }
+  };
+
+  // ✅ Optimistic Join
+  const handleJoin = async (groupId: string) => {
+    if (!token) throw new Error("Not authenticated");
+
+    // 1. Check if already in list to avoid duplicates
+    const alreadyJoined = groupChats.some((c) => c.id === groupId);
+    if (alreadyJoined) return;
+
+    // 2. Add placeholder immediately
+    const optimisticChat: GroupChat = {
+      id: groupId,
+      name: "Loading...",
+      members: [],
+      _count: { messages: 0 },
+      createdAt: new Date().toISOString(),
+    } as unknown as GroupChat;
+
+    setGroupChats((prev) => [...prev, optimisticChat]);
+
+    try {
+      await joinGroupChat(token, groupId);
+      // 3. Refresh to get full group details (members, name, etc.)
+      await fetchChats();
+    } catch (err) {
+      // 4. Rollback on failure
+      setGroupChats((prev) => prev.filter((c) => c.id !== groupId));
+      throw err;
+    }
   };
 
   const handleDelete = async (id: string) => {
     if (!token) throw new Error("Not authenticated");
-    await deleteGroupChat(token, id);
+    
+    // Optional: Optimistic delete too
     setGroupChats((prev) => prev.filter((c) => c.id !== id));
-  };
-
-  const handleJoin = async (groupId: string) => {
-    if (!token) throw new Error("Not authenticated");
     
-    // joinGroupChat now returns { message, groupId }, not the full chat object
-    await joinGroupChat(token, groupId);
-    
-    // Refresh the entire list to get the newly joined group with full details (members, etc.)
-    await fetchChats();
+    try {
+      await deleteGroupChat(token, id);
+    } catch (err) {
+      // Rollback if delete fails
+      fetchChats();
+      throw err;
+    }
   };
 
   return {
