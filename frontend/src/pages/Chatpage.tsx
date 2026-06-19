@@ -249,7 +249,7 @@ export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPage
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-scroll to bottom on new messages
+  // Auto-scroll to bottom on new messages or when agent is thinking
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, sending]);
@@ -300,7 +300,7 @@ export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPage
 
   return (
     <div className="chat-page">
-      {/* ── Header ────────────────────────────────────────────── */}
+      {/* ─ Header ────────────────────────────────────────────── */}
       <header className="chat-header">
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {onBack && (
@@ -341,7 +341,7 @@ export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPage
               {chat.members.slice(0, 4).map((m: GroupMember, i: number) => (
                 <div
                   key={m.id}
-title={m.user.name}
+                  title={m.user.name}
                   style={{ marginLeft: i === 0 ? 0 : -8, zIndex: 4 - i }}
                 >
                   <Avatar name={m.user.name} userId={m.id} size={28} />
@@ -432,8 +432,9 @@ title={m.user.name}
             />
           ))}
 
+        {/* ✅ FIXED: Using 'sending' from hook instead of undefined 'agentThinking' */}
         {sending && <AgentThinking />}
-
+        
         <div ref={bottomRef} />
       </div>
 
