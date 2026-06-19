@@ -25,7 +25,7 @@ export interface GroupMessage {
   content: string;
   sources: null | unknown[];
   groupChatId: string;
-  senderType: "USER" | "AGENT";
+  senderType: "USER" | "AGENT" | "SYSTEM"; 
   userId: string | null;
   agentId: string | null;
   createdAt: string;

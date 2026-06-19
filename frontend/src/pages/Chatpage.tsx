@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useGroupChat } from "../hooks/useGroupChat"; 
+import { useGroupChat } from "../hooks/useGroupChat";
 import type { GroupMessage, GroupMember } from "../lib/groupchat";
 
 // ── Tiny helpers ─────────────────────────────────────────────────────────────
@@ -8,6 +8,17 @@ function formatTime(dateStr: string): string {
   return new Date(dateStr).toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
+  });
+}
+
+function formatJoinDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const sameYear = d.getFullYear() === now.getFullYear();
+  return d.toLocaleDateString([], {
+    month: "short",
+    day: "numeric",
+    year: sameYear ? undefined : "numeric",
   });
 }
 
@@ -72,21 +83,11 @@ function Avatar({ name, avatarUrl, userId, isAgent, size = 32 }: AvatarProps) {
   };
 
   if (avatarUrl) {
-    return (
-      <img
-        src={avatarUrl}
-        alt={name}
-        style={{ ...style, objectFit: "cover" }}
-      />
-    );
+    return <img src={avatarUrl} alt={name} style={{ ...style, objectFit: "cover" }} />;
   }
 
   // Agent icon: a small ⬡ hex, user: initials
-  return (
-    <div style={style}>
-      {isAgent ? "⬡" : initials(name)}
-    </div>
-  );
+  return <div style={style}>{isAgent ? "⬡" : initials(name)}</div>;
 }
 
 interface MessageBubbleProps {
@@ -95,11 +96,33 @@ interface MessageBubbleProps {
   showAvatar: boolean;
 }
 
+/** Centered pill for system events — "Anish joined the group · Jun 19" */
+function SystemMessage({ msg }: { msg: GroupMessage }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "center", margin: "10px 0" }}>
+      <span
+        style={{
+          fontSize: "0.72rem",
+          color: "var(--text-3)",
+          background: "var(--bg-3)",
+          border: "1px solid var(--border)",
+          borderRadius: 999,
+          padding: "4px 12px",
+        }}
+      >
+        {msg.user?.name ?? "Someone"} {msg.content} · {formatJoinDate(msg.createdAt)}
+      </span>
+    </div>
+  );
+}
+
 function MessageBubble({ msg, isSelf, showAvatar }: MessageBubbleProps) {
+  if (msg.senderType === "SYSTEM") {
+    return <SystemMessage msg={msg} />;
+  }
+
   const isAgent = msg.senderType === "AGENT";
-  const senderName = isAgent
-    ? `@${msg.agent?.name ?? "agent"}`
-    : msg.user?.name ?? "Unknown";
+  const senderName = isAgent ? `@${msg.agent?.name ?? "agent"}` : msg.user?.name ?? "Unknown";
 
   const isError = isAgent && msg.content.startsWith("Agent @");
 
@@ -165,15 +188,9 @@ function MessageBubble({ msg, isSelf, showAvatar }: MessageBubbleProps) {
               : isSelf
               ? "none"
               : "1px solid var(--border)",
-            borderRadius: isSelf
-              ? "14px 14px 4px 14px"
-              : "14px 14px 14px 4px",
+            borderRadius: isSelf ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
             padding: "9px 13px",
-            color: isError
-              ? "var(--red)"
-              : isSelf
-              ? "#fff"
-              : "var(--text)",
+            color: isError ? "var(--red)" : isSelf ? "#fff" : "var(--text)",
             fontSize: "0.9rem",
             lineHeight: 1.6,
             wordBreak: "break-word",
@@ -242,8 +259,18 @@ interface ChatPageProps {
 }
 
 export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPageProps) {
-  const { chat, messages, loading, sending, error, connected, sendMessage, copyInviteLink, inviteCopied } =
-    useGroupChat(groupChatId, token);
+  const {
+    chat,
+    messages,
+    loading,
+    sending,
+    agentThinking,
+    error,
+    connected,
+    sendMessage,
+    copyInviteLink,
+    inviteCopied,
+  } = useGroupChat(groupChatId, token, currentUserId);
 
   const [draft, setDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -252,7 +279,7 @@ export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPage
   // Auto-scroll to bottom on new messages or when agent is thinking
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, sending]);
+  }, [messages, agentThinking]);
 
   // Auto-resize textarea
   function handleInput(e: React.ChangeEvent<HTMLTextAreaElement>) {
@@ -278,11 +305,13 @@ export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPage
     }
   }
 
-  // Group consecutive messages by same sender
+  // Group consecutive messages by same sender (system messages always stand alone)
   function shouldShowAvatar(idx: number): boolean {
-    if (idx === messages.length - 1) return true;
     const curr = messages[idx];
+    if (curr.senderType === "SYSTEM") return false;
+    if (idx === messages.length - 1) return true;
     const next = messages[idx + 1];
+    if (next.senderType === "SYSTEM") return true;
     return (curr.userId ?? curr.agentId) !== (next.userId ?? next.agentId);
   }
 
@@ -311,7 +340,7 @@ export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPage
             </button>
           )}
           <div>
-            <h2 className="chat-title">{loading ? "Loading…" : (chat?.name ?? "Group Chat")}</h2>
+            <h2 className="chat-title">{loading ? "Loading…" : chat?.name ?? "Group Chat"}</h2>
             <div className="chat-meta">
               <span
                 style={{
@@ -339,11 +368,7 @@ export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPage
           {chat?.members && chat.members.length > 0 && (
             <div className="chat-member-stack">
               {chat.members.slice(0, 4).map((m: GroupMember, i: number) => (
-                <div
-                  key={m.id}
-                  title={m.user.name}
-                  style={{ marginLeft: i === 0 ? 0 : -8, zIndex: 4 - i }}
-                >
+                <div key={m.id} title={m.user.name} style={{ marginLeft: i === 0 ? 0 : -8, zIndex: 4 - i }}>
                   <Avatar name={m.user.name} userId={m.id} size={28} />
                 </div>
               ))}
@@ -432,9 +457,10 @@ export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPage
             />
           ))}
 
-        {/* ✅ FIXED: Using 'sending' from hook instead of undefined 'agentThinking' */}
-        {sending && <AgentThinking />}
-        
+        {/* Only the agent-typing indicator shows here now — sending your own
+            message no longer triggers this (see useGroupChat: sending vs agentThinking) */}
+        {agentThinking && <AgentThinking />}
+
         <div ref={bottomRef} />
       </div>
 
@@ -454,7 +480,7 @@ export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPage
           <button
             className="chat-send-btn"
             onClick={handleSend}
-            disabled={!draft.trim() || !connected}
+            disabled={!draft.trim() || !connected || sending}
             aria-label="Send"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" width="16" height="16">
