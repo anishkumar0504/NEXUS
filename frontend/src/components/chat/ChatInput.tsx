@@ -37,10 +37,10 @@ export function ChatInput({ connected, sending, onSend }: ChatInputProps) {
     const lines = textBeforeCursor.slice(0, lastAt).split("\n");
     const currentLine = lines[lines.length - 1];
     const charWidth = 8;
-    const lineHeight = 20;
+    const dropdownHeight = 180;
 
     setMentionPos({
-      top: lines.length * lineHeight + 40,
+      top: -dropdownHeight - 10,
       left: currentLine.length * charWidth + 12,
     });
 
@@ -110,6 +110,15 @@ export function ChatInput({ connected, sending, onSend }: ChatInputProps) {
 
   return (
     <div style={{ position: "relative" }}>
+      {/* Dropdown ABOVE input */}
+      {mentionQuery !== null && (
+        <MentionDropdown
+          query={mentionQuery}
+          onSelect={handleMentionSelect}
+          position={mentionPos}
+        />
+      )}
+
       <div className="chat-input-bar">
         <div className="chat-searchbar">
           <textarea
@@ -138,14 +147,6 @@ export function ChatInput({ connected, sending, onSend }: ChatInputProps) {
         </div>
         <p className="chat-input-hint">Enter to send · Shift+Enter for new line · @ to mention agent</p>
       </div>
-
-      {mentionQuery !== null && (
-        <MentionDropdown
-          query={mentionQuery}
-          onSelect={handleMentionSelect}
-          position={mentionPos}
-        />
-      )}
     </div>
   );
 }
