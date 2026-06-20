@@ -223,7 +223,8 @@ socket.on("new-message", (rawMsg: any) => {
         },
         agent: null,
       };
-
+// Inside sendMessage, right after creating optimisticMsg:
+console.log("[OPTIMISTIC] created:", { id: optimisticMsg.id, tempId: optimisticMsg.tempId });
       setMessages((prev) => [...prev, optimisticMsg]);
       setSending(true);
 
