@@ -74,7 +74,7 @@ export async function getGroup(req: Request, res: Response) {
 
 export async function postMessage(req: Request, res: Response) {
   const { groupId } = req.params;
-  const { content } = req.body;
+  const { content ,tempId} = req.body;
 
   if (!content) return res.status(400).json({ error: "content is required" });
 
@@ -83,7 +83,6 @@ export async function postMessage(req: Request, res: Response) {
   });
   if (!member) return res.status(403).json({ error: "Not a member of this group" });
 
-  const tempId = randomUUID();
 
   await messageQueue.add("ingest-message", {
     groupId,

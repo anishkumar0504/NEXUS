@@ -140,12 +140,13 @@ export async function getGroupMessages(
 export async function postGroupMessage(
   token: string,
   groupId: string,
-  content: string
+  content: string,
+  tempId : string,
 ): Promise<{ status: string; tempId: string }> {
   const res = await fetch(`${API_BASE}/${groupId}/message`, {
     method: "POST",
     headers: getHeaders(token),
-    body: JSON.stringify({ content }),
+    body: JSON.stringify({ content,tempId }),
   });
   if (!res.ok) {
     const error = await res.json();
