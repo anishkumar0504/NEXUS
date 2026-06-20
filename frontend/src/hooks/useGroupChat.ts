@@ -160,17 +160,9 @@ export function useGroupChat(
       }
     };
 
-socket.on("new-message", (rawMsg: any) => {
-  console.log("[SOCKET] new-message received:", {
-    id: rawMsg.id,
-    tempId: rawMsg.tempId,
-    content: rawMsg.content?.slice(0, 30),
-    senderType: rawMsg.senderType,
-    hasUser: !!rawMsg.user,
-    userName: rawMsg.user?.name,
-  });
-  handleMessage(rawMsg);
-});    socket.on("group_message", handleMessage); // ← backwards compat for joinGroup
+socket.on("new-message", handleMessage);
+
+socket.on("group_message", handleMessage);  
 
     socket.on("member_joined", ({ member }: { member: GroupMember }) => {
       setChat((prev) => {
@@ -224,7 +216,6 @@ socket.on("new-message", (rawMsg: any) => {
         agent: null,
       };
 // Inside sendMessage, right after creating optimisticMsg:
-console.log("[OPTIMISTIC] created:", { id: optimisticMsg.id, tempId: optimisticMsg.tempId });
       setMessages((prev) => [...prev, optimisticMsg]);
       setSending(true);
 

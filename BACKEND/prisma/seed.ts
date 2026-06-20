@@ -6,10 +6,18 @@ async function seed() {
     update: {},
     create: { name: "summarizer", type: "SUMMARIZER" },
   });
+
   await prisma.agent.upsert({
     where: { name: "imagegen" },
     update: {},
     create: { name: "imagegen", type: "IMAGE_GEN" },
+  });
+
+  // ← ADD THIS
+  await prisma.agent.upsert({
+    where: { name: "nexus" },
+    update: {},
+    create: { name: "nexus", type: "SUMMARIZER" }, // or create a new type like "ASSISTANT"
   });
 }
 

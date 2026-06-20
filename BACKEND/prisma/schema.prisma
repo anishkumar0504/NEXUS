@@ -88,6 +88,7 @@ enum AgentType {
   SUMMARIZER
   IMAGE_GEN
   PDF_GEN
+  ASSISTANT   
 }
 
 model GroupMessage {
