@@ -1,9 +1,9 @@
 // src/components/chat/MessageList.tsx
 import { useRef, useEffect } from "react";
-import { MessageBubble, PlanCard } from "./MessageBubble";
+import { MessageBubble } from "./MessageBubble";
 import { AgentThinking } from "./AgentThinking";
 import type { GroupMessage } from "../../lib/groupchat";
-
+import { PlanCard } from "./PlanCard";
 interface MessageListProps {
   messages: GroupMessage[];
   loading: boolean;
@@ -75,11 +75,13 @@ export function MessageList({
           
           if (isPlan && onSelectPlanOption) {
             return (
-              <PlanCard
-                key={msg.id}
-                msg={msg}
-                onSelectOption={onSelectPlanOption}
-              />
+           <PlanCard
+  key={msg.id}
+  msg={msg}
+  currentUserId={currentUserId}
+  onSelectOption={onSelectPlanOption}
+  onSendCustom={onSelectPlanOption} // same handler, just different prefix
+/>
             );
           }
 

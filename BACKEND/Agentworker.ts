@@ -8,18 +8,13 @@ import { prisma } from "./lib/prisma.js";
 export const agentWorker = new Worker<AgentJobData>(
   "agent-dispatch",
   async (job) => {
-    const { groupId, agentName, prompt, tempId } = job.data;
+    const { groupId, agentName, prompt, tempId, triggeringUserId } = job.data;
 
     let content: string;
     let agentId: string | undefined;
 
     try {
-      // NOTE: runAgent should now just return generated text (and the
-      // agent's id), not write to Prisma itself — persistence happens
-      // once, centrally, in runMessagePipeline below. If your current
-      // runAgent already calls prisma.groupMessage.create internally,
-      // strip that out or you'll get a duplicate row per agent reply.
-      const result = await runAgent(agentName, groupId, prompt);
+      const result = await runAgent(agentName, groupId, prompt, triggeringUserId);
       content = result.content;
       agentId = result.agentId;
     } catch (err: any) {
@@ -43,4 +38,4 @@ export const agentWorker = new Worker<AgentJobData>(
 
 agentWorker.on("failed", (job, err) => {
   console.error(`[agentWorker] job ${job?.id} failed:`, err.message);
-}); 
+});

@@ -53,15 +53,15 @@ export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPage
         onCopyInvite={copyInviteLink}
       />
 
-      <MessageList
-        messages={messages}
-        loading={loading}
-        error={error}
-        currentUserId={currentUserId}
-        agentThinking={agentThinking}
-        activeAgentName={activeAgentName}
-        onSelectPlanOption={handleSelectPlanOption}
-      />
+   <MessageList
+  messages={messages}
+  loading={loading}
+  error={error}
+  currentUserId={currentUserId}
+  agentThinking={agentThinking}
+  activeAgentName={activeAgentName}
+  onSelectPlanOption={handleSelectPlanOption}
+/>
 
       <ChatInput
         connected={connected}
