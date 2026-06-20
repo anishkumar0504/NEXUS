@@ -229,7 +229,7 @@ console.log("[OPTIMISTIC] created:", { id: optimisticMsg.id, tempId: optimisticM
       setSending(true);
 
       try {
-        await postGroupMessage(token, groupChatId, content.trim());
+        await postGroupMessage(token, groupChatId, content.trim(),tempId);
         // Fallback: if socket event is delayed/missed, clear sending after 3s
         setTimeout(() => setSending(false), 3000);
       } catch (err: any) {
