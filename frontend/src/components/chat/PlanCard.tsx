@@ -39,11 +39,12 @@ export function PlanCard({ msg, currentUserId, onSelectOption, onSendCustom }: P
     }
   }
 
-  const isMyPlan = msg.userId === currentUserId; // Only the asker can answer
+  // Check if this plan belongs to current user
+  const isMyPlan = msg.triggeringUserId === currentUserId;
   const isAnswered = selected !== null;
 
   function handleSelect(opt: string) {
-    if (isAnswered) return;
+    if (isAnswered || !isMyPlan) return;
     setSelected(opt);
     if (opt === "__custom__") {
       setShowCustom(true);
@@ -59,12 +60,12 @@ export function PlanCard({ msg, currentUserId, onSelectOption, onSendCustom }: P
   }
 
   function handleSkip() {
-    if (isAnswered) return;
+    if (isAnswered || !isMyPlan) return;
     setSelected("skip");
     onSelectOption("Proceed with your plan.");
   }
 
-  // If not my plan, show as read-only
+  // Read-only view for other users
   if (!isMyPlan) {
     return (
       <div style={{ display: "flex", justifyContent: "center", margin: "12px 0" }}>
@@ -78,7 +79,7 @@ export function PlanCard({ msg, currentUserId, onSelectOption, onSendCustom }: P
           opacity: 0.6,
         }}>
           <div style={{ fontSize: "0.8rem", color: "var(--text-3)", marginBottom: 8 }}>
-            {msg.agent?.name || "Nexus"} asked {msg.user?.name || "someone"} a question...
+            {msg.agent?.name || "Nexus"} asked a question...
           </div>
           <div style={{ fontSize: "0.85rem", color: "var(--text)" }}>
             {bodyLines.map((line, i) => <p key={i}>{line}</p>)}
@@ -88,6 +89,7 @@ export function PlanCard({ msg, currentUserId, onSelectOption, onSendCustom }: P
     );
   }
 
+  // Interactive view for the user who asked
   return (
     <div style={{ display: "flex", justifyContent: "center", margin: "12px 0" }}>
       <div style={{

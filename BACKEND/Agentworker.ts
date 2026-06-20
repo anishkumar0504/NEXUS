@@ -30,6 +30,8 @@ export const agentWorker = new Worker<AgentJobData>(
       content,
       senderType: "AGENT",
       agentId,
+        triggeringUserId, // ← ADD THIS
+
       createdAt: new Date().toISOString(),
     });
   },

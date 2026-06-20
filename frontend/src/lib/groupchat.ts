@@ -28,6 +28,8 @@ export interface GroupMessage {
   senderType: "USER" | "AGENT" | "SYSTEM"; 
   userId: string | null;
   agentId: string | null;
+    triggeringUserId?: string; // ← ADD THIS
+
   createdAt: string;
   user: {
     id: string;
@@ -35,7 +37,11 @@ export interface GroupMessage {
     email: string;
     provider: string;
   } | null;
-  agent: Agent | null;
+  agent: {
+    id: string;
+    name: string;
+    type: string;
+  } | null;
 }
 
 export interface GroupChat {

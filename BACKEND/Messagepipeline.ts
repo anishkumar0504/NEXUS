@@ -13,6 +13,8 @@ export interface PipelineMessage {
   senderType: "USER" | "AGENT" | "SYSTEM";
   userId?: string;
   agentId?: string;
+    triggeringUserId?: string; // ← ADD THIS
+
   createdAt: string;
   id?: string;
   pending?: boolean;
@@ -69,6 +71,8 @@ export async function runMessagePipeline(message: PipelineMessage) {
     pending: false,
     user: fullMessage?.user ?? null,
     agent: fullMessage?.agent ?? null,
+      triggeringUserId: message.triggeringUserId, // ← preserve it
+
   };
 
   await cacheMessage(confirmed);

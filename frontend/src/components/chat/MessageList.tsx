@@ -73,17 +73,18 @@ export function MessageList({
         messages.map((msg: GroupMessage, idx: number) => {
           const isPlan = msg.senderType === "AGENT" && msg.content.includes("○");
           
-          if (isPlan && onSelectPlanOption) {
-            return (
-           <PlanCard
-  key={msg.id}
-  msg={msg}
-  currentUserId={currentUserId}
-  onSelectOption={onSelectPlanOption}
-  onSendCustom={onSelectPlanOption} // same handler, just different prefix
-/>
-            );
-          }
+         // In MessageList.tsx, inside the map:
+if (isPlan && onSelectPlanOption) {
+  return (
+    <PlanCard
+      key={msg.id}
+      msg={msg}
+      currentUserId={currentUserId}
+      onSelectOption={onSelectPlanOption}
+      onSendCustom={onSelectPlanOption}
+    />
+  );
+}
 
           return (
             <MessageBubble
