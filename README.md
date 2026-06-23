@@ -1,4 +1,4 @@
-# 🔍 AI Search Engine
+# 🔍 AI Search Engine + Multi agent &Multiuser
 
 A Perplexity-inspired AI search engine built from scratch using modern full-stack technologies.
 
