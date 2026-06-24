@@ -4,6 +4,7 @@ import { MessageBubble } from "./MessageBubble";
 import { AgentThinking } from "./AgentThinking";
 import type { GroupMessage } from "../../lib/groupchat";
 import { PlanCard } from "./PlanCard";
+
 interface MessageListProps {
   messages: GroupMessage[];
   loading: boolean;
@@ -72,33 +73,72 @@ export function MessageList({
       {!loading &&
         messages.map((msg: GroupMessage, idx: number) => {
           const isPlan = msg.senderType === "AGENT" && msg.content.includes("○");
-          
-         // In MessageList.tsx, inside the map:
-if (isPlan && onSelectPlanOption) {
-  return (
-    <PlanCard
-      key={msg.id}
-      msg={msg}
-      currentUserId={currentUserId}
-      onSelectOption={onSelectPlanOption}
-      onSendCustom={onSelectPlanOption}
-    />
-  );
-}
+          const hasImage = msg.senderType === "AGENT" && msg.sources?.image;
+
+          if (isPlan && onSelectPlanOption) {
+            return (
+              <PlanCard
+                key={msg.id}
+                msg={msg}
+                currentUserId={currentUserId}
+                onSelectOption={onSelectPlanOption}
+                onSendCustom={onSelectPlanOption}
+              />
+            );
+          }
 
           return (
-            <MessageBubble
-              key={msg.id}
-              msg={msg}
-              isSelf={msg.userId === currentUserId}
-              showAvatar={shouldShowAvatar(messages, idx)}
-            />
+            <div key={msg.id} className="message-wrapper">
+              <MessageBubble
+                msg={msg}
+                isSelf={msg.userId === currentUserId}
+                showAvatar={shouldShowAvatar(messages, idx)}
+              />
+              {hasImage && (
+                <div className={`image-wrapper ${msg.userId === currentUserId ? "self" : "other"}`}>
+                  <img
+                    src={msg.sources.image}
+                    alt="AI generated"
+                    className="generated-image"
+                    loading="lazy"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                </div>
+              )}
+            </div>
           );
         })}
 
       {agentThinking && <AgentThinking agentName={activeAgentName} />}
 
       <div ref={bottomRef} />
+
+      <style>{`
+        .message-wrapper {
+          display: flex;
+          flex-direction: column;
+          margin-bottom: 8px;
+        }
+        .image-wrapper {
+          display: flex;
+        }
+        .image-wrapper.self {
+          justify-content: flex-end;
+        }
+        .image-wrapper.other {
+          justify-content: flex-start;
+          margin-left: 44px;
+        }
+        .generated-image {
+          max-width: 320px;
+          max-height: 320px;
+          border-radius: 12px;
+          border: 1px solid var(--border);
+          margin-top: 4px;
+        }
+      `}</style>
     </div>
   );
 }
