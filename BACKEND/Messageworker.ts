@@ -1,7 +1,7 @@
 import { Worker } from "bullmq";
 import { randomUUID } from "crypto";
 import { createBullConnection } from "./redis/redis.js";
-import { runMessagePipeline } from "./messagePipeline.js";
+import { runMessagePipeline } from "./Messagepipeline.js";
 import { agentQueue, MessageJobData } from "./queues/queues.js";
 import  {extractMentions}  from "./lib/agentDispatcher.js";
 
