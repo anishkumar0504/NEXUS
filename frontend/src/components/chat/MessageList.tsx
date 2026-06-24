@@ -1,5 +1,5 @@
 // src/components/chat/MessageList.tsx
-import { useRef, useEffect, useState } from "react"; // add useState
+import { useRef, useEffect } from "react";
 import { MessageBubble } from "./MessageBubble";
 import { AgentThinking } from "./AgentThinking";
 import type { GroupMessage } from "../../lib/groupchat";
@@ -24,53 +24,6 @@ function shouldShowAvatar(messages: GroupMessage[], idx: number): boolean {
   return (curr.userId ?? curr.agentId) !== (next.userId ?? next.agentId);
 }
 
-// Image skeleton component
-function ImageSkeleton() {
-  return (
-    <div className="image-skeleton">
-      <div className="shimmer"></div>
-      <span className="skeleton-text">Generating image...</span>
-      <style>{`
-        .image-skeleton {
-          width: 320px;
-          height: 320px;
-          border-radius: 12px;
-          background: var(--surface-2);
-          border: 1px solid var(--border);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          position: relative;
-          overflow: hidden;
-        }
-        .shimmer {
-          position: absolute;
-          top: 0;
-          left: -100%;
-          width: 100%;
-          height: 100%;
-          background: linear-gradient(
-            90deg,
-            transparent,
-            rgba(255,255,255,0.08),
-            transparent
-          );
-          animation: shimmer 1.5s infinite;
-        }
-        .skeleton-text {
-          color: var(--text-3);
-          font-size: 0.85rem;
-          z-index: 1;
-        }
-        @keyframes shimmer {
-          0% { left: -100%; }
-          100% { left: 100%; }
-        }
-      `}</style>
-    </div>
-  );
-}
-
 export function MessageList({
   messages,
   loading,
@@ -81,15 +34,10 @@ export function MessageList({
   onSelectPlanOption,
 }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
-  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, agentThinking]);
-
-  const handleImageLoad = (msgId: string) => {
-    setLoadedImages(prev => new Set(prev).add(msgId));
-  };
 
   return (
     <div className="chat-messages">
@@ -124,9 +72,11 @@ export function MessageList({
 
       {!loading &&
         messages.map((msg: GroupMessage, idx: number) => {
+
+
+           
           const isPlan = msg.senderType === "AGENT" && msg.content.includes("○");
-          const hasImage = msg.senderType === "AGENT" && !!msg.sources?.image;
-          const imageLoaded = loadedImages.has(msg.id);
+const hasImage = msg.senderType === "AGENT" && !!msg.sources?.image;
 
           if (isPlan && onSelectPlanOption) {
             return (
@@ -147,21 +97,19 @@ export function MessageList({
                 isSelf={msg.userId === currentUserId}
                 showAvatar={shouldShowAvatar(messages, idx)}
               />
-              {hasImage && (
-                <div className={`image-wrapper ${msg.userId === currentUserId ? "self" : "other"}`}>
-                  {!imageLoaded && <ImageSkeleton />}
-                  <img
-                    src={msg.sources!.image}
-                    alt="AI generated"
-                    className={`generated-image ${imageLoaded ? 'visible' : 'hidden'}`}
-                    loading="lazy"
-                    onLoad={() => handleImageLoad(msg.id)}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = "none";
-                    }}
-                  />
-                </div>
-              )}
+     {hasImage && msg.sources?.image && (
+  <div className={`image-wrapper ${msg.userId === currentUserId ? "self" : "other"}`}>
+    <img
+      src={msg.sources.image}  // No ! needed, TypeScript knows it's defined
+      alt="AI generated"
+      className="generated-image"
+      loading="lazy"
+      onError={(e) => {
+        (e.target as HTMLImageElement).style.display = "none";
+      }}
+    />
+  </div>
+)}
             </div>
           );
         })}
@@ -178,7 +126,6 @@ export function MessageList({
         }
         .image-wrapper {
           display: flex;
-          margin-top: 4px;
         }
         .image-wrapper.self {
           justify-content: flex-end;
@@ -192,15 +139,7 @@ export function MessageList({
           max-height: 320px;
           border-radius: 12px;
           border: 1px solid var(--border);
-          transition: opacity 0.3s ease;
-        }
-        .generated-image.hidden {
-          opacity: 0;
-          position: absolute;
-          pointer-events: none;
-        }
-        .generated-image.visible {
-          opacity: 1;
+          margin-top: 4px;
         }
       `}</style>
     </div>
