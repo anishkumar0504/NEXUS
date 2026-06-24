@@ -1,7 +1,7 @@
 import { Worker } from "bullmq";
 import { randomUUID } from "crypto";
 import { createBullConnection } from "./redis/redis.js";
-import { runmessagePipeline } from "./messagePipeline.js";
+import { runMessagePipeline } from "./messagePipeline.js";
 import { agentQueue, MessageJobData } from "./queues/queues.js";
 import  {extractMentions}  from "./lib/agentDispatcher.js";
 
@@ -10,7 +10,7 @@ export const messageWorker = new Worker<MessageJobData>(
   async (job) => {
     const { groupId, content, senderType, userId, agentId, tempId } = job.data;
 
-    const saved = await runmessagePipeline({
+    const saved = await runMessagePipeline({
       tempId,
       groupId,
       content,
