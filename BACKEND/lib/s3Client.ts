@@ -1,3 +1,4 @@
+// lib/s3Client.ts
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 const s3Client = new S3Client({
@@ -7,7 +8,7 @@ const s3Client = new S3Client({
     accessKeyId: process.env.SUPABASE_S3_ACCESS_KEY_ID!,
     secretAccessKey: process.env.SUPABASE_S3_SECRET_ACCESS_KEY!,
   },
-  forcePathStyle: true, // Required for Supabase S3
+  forcePathStyle: true,
 });
 
 export async function uploadToS3(
@@ -25,5 +26,7 @@ export async function uploadToS3(
     })
   );
 
-  return `${process.env.SUPABASE_S3_ENDPOINT}/${process.env.SUPABASE_S3_BUCKET}/${key}`;
+  // Return PUBLIC URL format, NOT S3 endpoint
+   const projectRef = "gsqlirsxlzvyoyetduet"; // Your project ref
+  return `https://${projectRef}.supabase.co/storage/v1/object/public/${process.env.SUPABASE_S3_BUCKET}/${key}`;
 }
