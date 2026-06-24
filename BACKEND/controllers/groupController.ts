@@ -2,16 +2,58 @@ import { Request, Response } from "express";
 import { randomUUID } from "crypto";
 import { prisma } from "../lib/prisma.js";
 import { messageQueue } from "../queues/queues.js";
+import { Server as SocketIOServer } from "socket.io";
+
+// ── Type-safe param extractor ──────────────────────────────
+function getParam(req: Request, key: string): string | undefined {
+  const val = req.params[key];
+  return typeof val === "string" ? val : undefined;
+}
+
+// ── Auth guard ─────────────────────────────────────────────
+function requireUserId(req: Request, res: Response): string | null {
+  if (!req.userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return null;
+  }
+  return req.userId;
+}
+
+// ── Body validators ────────────────────────────────────────
+function requireString(body: unknown, key: string): string | null {
+  if (typeof body === "object" && body !== null) {
+    const val = (body as Record<string, unknown>)[key];
+    if (typeof val === "string" && val.trim().length > 0) {
+      return val.trim();
+    }
+  }
+  return null;
+}
+
+function optionalString(body: unknown, key: string): string | undefined {
+  if (typeof body === "object" && body !== null) {
+    const val = (body as Record<string, unknown>)[key];
+    if (typeof val === "string") return val;
+  }
+  return undefined;
+}
+
+// ── Handlers ───────────────────────────────────────────────
 
 export async function createGroup(req: Request, res: Response) {
-  const { name } = req.body;
-  if (!name) return res.status(400).json({ error: "name is required" });
+  const userId = requireUserId(req, res);
+  if (!userId) return;
+
+  const name = requireString(req.body, "name");
+  if (!name) {
+    return res.status(400).json({ error: "name is required and must be a non-empty string" });
+  }
 
   const group = await prisma.groupChat.create({
     data: {
       name,
       members: {
-        create: { userId: req.userId! },
+        create: { userId },
       },
     },
   });
@@ -20,19 +62,25 @@ export async function createGroup(req: Request, res: Response) {
 }
 
 export async function joinGroup(req: Request, res: Response) {
-  const { groupId } = req.params;
+  const userId = requireUserId(req, res);
+  if (!userId) return;
+
+  const groupId = getParam(req, "groupId");
+  if (!groupId) {
+    return res.status(400).json({ error: "groupId is required" });
+  }
 
   const group = await prisma.groupChat.findUnique({ where: { id: groupId } });
   if (!group) return res.status(404).json({ error: "Group not found" });
 
   const existing = await prisma.groupMember.findUnique({
-    where: { groupChatId_userId: { groupChatId: groupId, userId: req.userId! } },
+    where: { groupChatId_userId: { groupChatId: groupId, userId } },
   });
 
   if (!existing) {
     const [member, systemMessage] = await prisma.$transaction([
       prisma.groupMember.create({
-        data: { groupChatId: groupId, userId: req.userId! },
+        data: { groupChatId: groupId, userId },
         include: { user: true },
       }),
       prisma.groupMessage.create({
@@ -40,14 +88,13 @@ export async function joinGroup(req: Request, res: Response) {
           groupChatId: groupId,
           senderType: "SYSTEM",
           content: "joined the group",
-          userId: req.userId!,
+          userId,
         },
         include: { user: true },
       }),
     ]);
 
-    const io = req.app.get("io");
-    // FIXED: Use group:${groupId} room to match socketBridge
+    const io = req.app.get("io") as SocketIOServer;
     io.to(`group:${groupId}`).emit("member_joined", { member, groupId });
     io.to(`group:${groupId}`).emit("new-message", systemMessage);
   }
@@ -56,10 +103,16 @@ export async function joinGroup(req: Request, res: Response) {
 }
 
 export async function getGroup(req: Request, res: Response) {
-  const { groupId } = req.params;
+  const userId = requireUserId(req, res);
+  if (!userId) return;
+
+  const groupId = getParam(req, "groupId");
+  if (!groupId) {
+    return res.status(400).json({ error: "groupId is required" });
+  }
 
   const member = await prisma.groupMember.findUnique({
-    where: { groupChatId_userId: { groupChatId: groupId, userId: req.userId! } },
+    where: { groupChatId_userId: { groupChatId: groupId, userId } },
   });
   if (!member) return res.status(403).json({ error: "Not a member of this group" });
 
@@ -73,22 +126,31 @@ export async function getGroup(req: Request, res: Response) {
 }
 
 export async function postMessage(req: Request, res: Response) {
-  const { groupId } = req.params;
-  const { content ,tempId} = req.body;
+  const userId = requireUserId(req, res);
+  if (!userId) return;
 
-  if (!content) return res.status(400).json({ error: "content is required" });
+  const groupId = getParam(req, "groupId");
+  if (!groupId) {
+    return res.status(400).json({ error: "groupId is required" });
+  }
+
+  const content = requireString(req.body, "content");
+  if (!content) {
+    return res.status(400).json({ error: "content is required and must be a non-empty string" });
+  }
 
   const member = await prisma.groupMember.findUnique({
-    where: { groupChatId_userId: { groupChatId: groupId, userId: req.userId! } },
+    where: { groupChatId_userId: { groupChatId: groupId, userId } },
   });
   if (!member) return res.status(403).json({ error: "Not a member of this group" });
 
+  const tempId = optionalString(req.body, "tempId") ?? randomUUID();
 
   await messageQueue.add("ingest-message", {
     groupId,
     content,
     senderType: "USER",
-    userId: req.userId!,
+    userId,
     tempId,
   });
 
@@ -96,10 +158,16 @@ export async function postMessage(req: Request, res: Response) {
 }
 
 export async function getMessages(req: Request, res: Response) {
-  const { groupId } = req.params;
+  const userId = requireUserId(req, res);
+  if (!userId) return;
+
+  const groupId = getParam(req, "groupId");
+  if (!groupId) {
+    return res.status(400).json({ error: "groupId is required" });
+  }
 
   const member = await prisma.groupMember.findUnique({
-    where: { groupChatId_userId: { groupChatId: groupId, userId: req.userId! } },
+    where: { groupChatId_userId: { groupChatId: groupId, userId } },
   });
   if (!member) return res.status(403).json({ error: "Not a member of this group" });
 
@@ -113,43 +181,33 @@ export async function getMessages(req: Request, res: Response) {
 }
 
 export async function getUserGroups(req: Request, res: Response) {
+  const userId = requireUserId(req, res);
+  if (!userId) return;
+
   const groups = await prisma.groupChat.findMany({
     where: {
       members: {
-        some: {
-          userId: req.userId!,
-        },
+        some: { userId },
       },
     },
     include: {
       members: {
-        include: {
-          user: true,
-        },
+        include: { user: true },
       },
       _count: {
-        select: {
-          messages: true,
-        },
+        select: { messages: true },
       },
       messages: {
-        orderBy: {
-          createdAt: 'desc',
-        },
+        orderBy: { createdAt: "desc" },
         take: 1,
       },
     },
   });
 
   const sortedGroups = groups.sort((a, b) => {
-    const aLastMessage = a.messages[0]?.createdAt;
-    const bLastMessage = b.messages[0]?.createdAt;
-    
-    if (!aLastMessage && !bLastMessage) return 0;
-    if (!aLastMessage) return 1;
-    if (!bLastMessage) return -1;
-    
-    return new Date(bLastMessage).getTime() - new Date(aLastMessage).getTime();
+    const aTime = a.messages[0]?.createdAt?.getTime() ?? 0;
+    const bTime = b.messages[0]?.createdAt?.getTime() ?? 0;
+    return bTime - aTime;
   });
 
   res.status(200).json({ groups: sortedGroups });

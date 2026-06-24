@@ -26,3 +26,5 @@ export async function generateImage(prompt: string): Promise<string> {
   // returns base64 data URL — caller decides whether to upload or send inline
   return `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`;
 }
+
+
