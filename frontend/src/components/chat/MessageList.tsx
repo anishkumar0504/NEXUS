@@ -94,19 +94,19 @@ const hasImage = msg.senderType === "AGENT" && !!msg.sources?.image;
                 isSelf={msg.userId === currentUserId}
                 showAvatar={shouldShowAvatar(messages, idx)}
               />
-              {hasImage && (
-                <div className={`image-wrapper ${msg.userId === currentUserId ? "self" : "other"}`}>
-                  <img
-      src={msg.sources!.image}  // Non-null assertion since we checked hasImage
-                    alt="AI generated"
-                    className="generated-image"
-                    loading="lazy"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = "none";
-                    }}
-                  />
-                </div>
-              )}
+     {hasImage && msg.sources?.image && (
+  <div className={`image-wrapper ${msg.userId === currentUserId ? "self" : "other"}`}>
+    <img
+      src={msg.sources.image}  // No ! needed, TypeScript knows it's defined
+      alt="AI generated"
+      className="generated-image"
+      loading="lazy"
+      onError={(e) => {
+        (e.target as HTMLImageElement).style.display = "none";
+      }}
+    />
+  </div>
+)}
             </div>
           );
         })}
