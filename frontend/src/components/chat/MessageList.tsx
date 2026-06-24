@@ -73,7 +73,7 @@ export function MessageList({
       {!loading &&
         messages.map((msg: GroupMessage, idx: number) => {
           const isPlan = msg.senderType === "AGENT" && msg.content.includes("○");
-          const hasImage = msg.senderType === "AGENT" && msg.sources?.image;
+const hasImage = msg.senderType === "AGENT" && !!msg.sources?.image;
 
           if (isPlan && onSelectPlanOption) {
             return (
@@ -97,7 +97,7 @@ export function MessageList({
               {hasImage && (
                 <div className={`image-wrapper ${msg.userId === currentUserId ? "self" : "other"}`}>
                   <img
-                    src={msg.sources.image}
+      src={msg.sources!.image}  // Non-null assertion since we checked hasImage
                     alt="AI generated"
                     className="generated-image"
                     loading="lazy"

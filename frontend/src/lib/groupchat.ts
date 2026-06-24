@@ -24,14 +24,13 @@ export interface GroupMessage {
   id: string;
   content: string;
   sources: null | {
-    image?: string;  // Can be URL (Pollinations) or base64 (Gemini)
+    image?: string;
   };
-    groupChatId: string;
-  senderType: "USER" | "AGENT" | "SYSTEM"; 
+  groupChatId: string;
+  senderType: "USER" | "AGENT" | "SYSTEM";
   userId: string | null;
   agentId: string | null;
-    triggeringUserId?: string; // ← ADD THIS
-
+  triggeringUserId?: string;
   createdAt: string;
   user: {
     id: string;
