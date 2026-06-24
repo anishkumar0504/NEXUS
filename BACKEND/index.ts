@@ -1,6 +1,6 @@
   import { createServer } from "http";
   import { app } from "./server/server.js";
-  import { initSocketBridge } from "./server/socketBridge.js";
+  import { initSocketBridge } from "./server/Socketbridge.js";
   import { messageWorker } from "./messageWorker.js";      // named export
   import { agentWorker } from "./agentWorker.js";         // named export
 
