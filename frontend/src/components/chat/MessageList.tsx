@@ -71,45 +71,66 @@ export function MessageList({
       )}
 
       {!loading &&
-        messages.map((msg: GroupMessage, idx: number) => {
-          const isPlan = msg.senderType === "AGENT" && msg.content.includes("○");
-const hasImage = msg.senderType === "AGENT" && !!msg.sources?.image;
+  messages.map((msg: GroupMessage, idx: number) => {
+    // DEBUG: Log every message
+    console.log("Rendering msg:", msg.id, "senderType:", msg.senderType, "sources:", msg.sources);
 
-          if (isPlan && onSelectPlanOption) {
-            return (
-              <PlanCard
-                key={msg.id}
-                msg={msg}
-                currentUserId={currentUserId}
-                onSelectOption={onSelectPlanOption}
-                onSendCustom={onSelectPlanOption}
-              />
-            );
-          }
+    const isPlan = msg.senderType === "AGENT" && msg.content.includes("○");
+    const hasImage = msg.senderType === "AGENT" && !!msg.sources?.image;
 
-          return (
-            <div key={msg.id} className="message-wrapper">
-              <MessageBubble
-                msg={msg}
-                isSelf={msg.userId === currentUserId}
-                showAvatar={shouldShowAvatar(messages, idx)}
-              />
-     {hasImage && msg.sources?.image && (
-  <div className={`image-wrapper ${msg.userId === currentUserId ? "self" : "other"}`}>
-    <img
-      src={msg.sources.image}  // No ! needed, TypeScript knows it's defined
-      alt="AI generated"
-      className="generated-image"
-      loading="lazy"
-      onError={(e) => {
-        (e.target as HTMLImageElement).style.display = "none";
-      }}
-    />
-  </div>
-)}
-            </div>
-          );
-        })}
+    // DEBUG: Force image render for all agent messages to test
+    const debugImage = msg.senderType === "AGENT" && msg.sources?.image;
+
+    if (isPlan && onSelectPlanOption) {
+      return (
+        <PlanCard
+          key={msg.id}
+          msg={msg}
+          currentUserId={currentUserId}
+          onSelectOption={onSelectPlanOption}
+          onSendCustom={onSelectPlanOption}
+        />
+      );
+    }
+
+    return (
+      <div key={msg.id} className="message-wrapper">
+        {/* DEBUG BLOCK - Remove after testing */}
+        {debugImage && (
+          <div style={{ border: '2px solid red', padding: 10, margin: 5 }}>
+            <p>DEBUG IMAGE: {msg.sources?.image}</p>
+            <img 
+              src={msg.sources!.image} 
+              alt="debug" 
+              style={{ maxWidth: 200, display: 'block' }} 
+              onError={(e) => console.error("Image failed:", e)}
+            />
+          </div>
+        )}
+
+        <MessageBubble
+          msg={msg}
+          isSelf={msg.userId === currentUserId}
+          showAvatar={shouldShowAvatar(messages, idx)}
+        />
+
+        {/* Original image render */}
+        {hasImage && (
+          <div className={`image-wrapper ${msg.userId === currentUserId ? "self" : "other"}`}>
+            <img
+              src={msg.sources!.image}
+              alt="AI generated"
+              className="generated-image"
+              loading="lazy"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
+            />
+          </div>
+        )}
+      </div>
+    );
+  })}
 
       {agentThinking && <AgentThinking agentName={activeAgentName} />}
 

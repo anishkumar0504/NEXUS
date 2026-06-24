@@ -97,6 +97,7 @@ model GroupMessage {
   sources     Json?
   groupChatId String
   groupChat   GroupChat   @relation(fields: [groupChatId], references: [id])
+  triggeringUserId String?  // <-- ADD THIS
 
   senderType  SenderType
   userId      String?
