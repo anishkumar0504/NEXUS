@@ -14,6 +14,17 @@
     "resolveJsonModule": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["./*.ts", "./lib/**/*.ts", "./types/**/*.ts", "./middleware/**/*.ts", "./prompt/**/*.ts", "./server/**/*.ts", "./redis/**/*.ts"],
-  "exclude": ["dist", "node_modules", "tests"]
+ "include": [
+    "./*.ts",
+    "./lib/**/*.ts",
+    "./types/**/*.ts",
+    "./middleware/**/*.ts",
+    "./prompt/**/*.ts",
+    "./server/**/*.ts",
+    "./redis/**/*.ts",
+    "./queues/**/*.ts",
+    "./controllers/**/*.ts",
+    "./routes/**/*.ts"
+  ],
+    "exclude": ["dist", "node_modules", "tests"]
 }
