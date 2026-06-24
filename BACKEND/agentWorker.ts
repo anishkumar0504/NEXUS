@@ -20,11 +20,13 @@ export const agentWorker = new Worker<AgentJobData>(
 
     let content: string;
     let agentId: string | undefined;
+    let sources: { image?: string } | null = null;  // <-- ADD THIS
 
     try {
       const result = await runAgent(agentName, groupId, prompt, triggeringUserId);
       content = result.content;
       agentId = result.agentId;
+      sources = result.sources || null;  // <-- ADD THIS
     } catch (err: any) {
       console.error(`[agentWorker] agent ${agentName} failed:`, err.message);
       content = `Agent @${agentName} failed: ${err.message}`;
@@ -38,6 +40,7 @@ export const agentWorker = new Worker<AgentJobData>(
       content,
       senderType: "AGENT",
       agentId,
+      sources,  // <-- ADD THIS
       triggeringUserId,
       createdAt: new Date().toISOString(),
     });

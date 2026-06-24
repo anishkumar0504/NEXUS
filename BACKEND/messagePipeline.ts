@@ -13,13 +13,13 @@ export interface PipelineMessage {
   senderType: "USER" | "AGENT" | "SYSTEM";
   userId?: string;
   agentId?: string;
-    triggeringUserId?: string; // ← ADD THIS
-
+  sources?: { image?: string } | null;
+  triggeringUserId?: string;
   createdAt: string;
   id?: string;
   pending?: boolean;
-  user?: any;      // ← added for broadcast
-  agent?: any;     // ← added for broadcast
+  user?: any;
+  agent?: any;
 }
 
 function cacheKey(groupId: string) {
@@ -46,6 +46,8 @@ export async function persistMessage(message: PipelineMessage) {
       senderType: message.senderType,
       userId: message.userId,
       agentId: message.agentId,
+      sources: message.sources || null,
+      triggeringUserId: message.triggeringUserId || null,
     },
   });
 }
@@ -71,8 +73,8 @@ export async function runMessagePipeline(message: PipelineMessage) {
     pending: false,
     user: fullMessage?.user ?? null,
     agent: fullMessage?.agent ?? null,
-      triggeringUserId: message.triggeringUserId, // ← preserve it
-
+    triggeringUserId: message.triggeringUserId,
+    sources: message.sources,
   };
 
   await cacheMessage(confirmed);
