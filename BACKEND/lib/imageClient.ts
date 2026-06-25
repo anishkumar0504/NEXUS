@@ -1,17 +1,31 @@
+// lib/imageClient.ts
 import { randomUUID } from "crypto";
 import { uploadToS3 } from "./s3Client.js";
 
-const POLLINATIONS_URL = "https://image.pollinations.ai/prompt";
+const HF_API_URL = "https://api-inference.huggingface.co/models";
+const HF_TOKEN = process.env.HF_API_KEY;
 
 export async function generateImage(prompt: string): Promise<string> {
-  const encoded = encodeURIComponent(prompt);
-  const pollinationsUrl = `${POLLINATIONS_URL}/${encoded}?width=1024&height=1024&nologo=true&seed=${Date.now()}`;
+  const response = await fetch(
+    `${HF_API_URL}/black-forest-labs/FLUX.1-schnell`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${HF_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ inputs: prompt }),
+    }
+  );
 
-  const response = await fetch(pollinationsUrl);
-  if (!response.ok) throw new Error("Failed to fetch image from Pollinations");
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`HF API error: ${response.status} - ${err}`);
+  }
 
-  const buffer = Buffer.from(await response.arrayBuffer());
+  const blob = await response.blob();
+  const buffer = Buffer.from(await blob.arrayBuffer());
+  
   const key = `generated/${randomUUID()}.png`;
-
   return uploadToS3(buffer, key);
 }
