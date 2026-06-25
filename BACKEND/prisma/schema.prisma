@@ -89,6 +89,7 @@ enum AgentType {
   IMAGE_GEN
   PDF_GEN
   ASSISTANT   
+  RESEARCH    
 }
 
 model GroupMessage {
