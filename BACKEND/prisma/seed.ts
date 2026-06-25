@@ -13,11 +13,17 @@ async function seed() {
     create: { name: "imagegen", type: "IMAGE_GEN" },
   });
 
-  // ← ADD THIS
   await prisma.agent.upsert({
     where: { name: "nexus" },
     update: {},
-    create: { name: "nexus", type: "SUMMARIZER" }, // or create a new type like "ASSISTANT"
+    create: { name: "nexus", type: "ASSISTANT" }, // Change from SUMMARIZER to ASSISTANT
+  });
+
+  // ← ADD THIS
+  await prisma.agent.upsert({
+    where: { name: "research" },
+    update: {},
+    create: { name: "research", type: "RESEARCH" },
   });
 }
 
