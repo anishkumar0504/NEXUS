@@ -2,8 +2,9 @@ import { callGroq } from "./groqClient.js";
 // import { generateImage } from "./geminiClient.js";
 import { prisma } from "./prisma.js";
 import { generateImage } from "./imageClient.js";
-  
-export const AGENT_NAMES = ["summarizer", "imagegen", "nexus"] as const;
+  import { runResearch } from "./researchPipeline.js";
+
+export const AGENT_NAMES = ["summarizer", "imagegen", "nexus", "research"] as const;
 export type AgentName = typeof AGENT_NAMES[number];
 export function extractMentions(content: string): AgentName[] {
   const found: AgentName[] = [];
@@ -98,7 +99,22 @@ export async function runAgent(
       sources: { image: imageDataUrl },
     };
   }
+// In runAgent:
+if (agentName === "research") {
+  const cleanPrompt = prompt.replace(/@research/gi, "").trim();
+  const result = await runResearch(cleanPrompt);
 
+  return {
+    content: result.answer,
+    agentId: agent.id,
+    sources: {
+      image: result.mindMapImageUrl,
+      citations: result.sources,
+      followUpQuestions: result.followUpQuestions,
+      mindMapImage: result.mindMapImageUrl,
+    },
+  };
+}
   // ── @nexus ──────────────────────────────────────────────────
   if (agentName === "nexus") {
     const cleanPrompt = prompt.replace(/@nexus/gi, "").trim();
@@ -211,6 +227,7 @@ Use the ○ symbol exactly as shown. Keep it concise.`,
       finalPrompt = `${choiceContext}\n\nOriginal request: ${plan?.prompt || cleanPrompt}`;
     }
 
+    
     // Normal response (general knowledge or follow-up to plan)
     const response = await callGroq([
       {

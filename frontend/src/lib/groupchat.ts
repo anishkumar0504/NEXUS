@@ -25,6 +25,9 @@ export interface GroupMessage {
   content: string;
   sources: null | {
     image?: string;
+    citations?: { title: string; url: string }[];
+    followUpQuestions?: string[];
+    mindMapImage?: string;
   };
   groupChatId: string;
   senderType: "USER" | "AGENT" | "SYSTEM";

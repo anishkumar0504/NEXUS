@@ -61,6 +61,8 @@ export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPage
   agentThinking={agentThinking}
   activeAgentName={activeAgentName}
   onSelectPlanOption={handleSelectPlanOption}
+    onSendMessage={sendMessage}  // <-- ADD THIS
+
 />
 
       <ChatInput

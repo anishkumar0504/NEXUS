@@ -34,6 +34,14 @@ export const AGENT_CONFIG: Record<string, AgentConfig> = {
     label: "ImageGen",
     description: "Generates images from text descriptions",
   },
+  research: {
+    icon: "◊",
+    bg: "rgba(245, 158, 11, 0.12)",
+    borderColor: "rgba(245, 158, 11, 0.3)",
+    label:"Deep Research",
+    color: "#fbbf24",
+    description: "Deep research with web search & mind maps",
+  },
 };
 
 export const ALL_AGENTS = Object.entries(AGENT_CONFIG).map(([name, config]) => ({
