@@ -32,6 +32,8 @@ export function useGroupChat(
   token: string | null,
   currentUserId: string | null
 ): UseGroupChatReturn {
+  const [socket, setSocket] = useState<Socket | null>(null); // ← ADD STATE
+
   const [chat, setChat] = useState<GroupChat | null>(null);
   const [messages, setMessages] = useState<GroupMessage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -119,7 +121,7 @@ export function useGroupChat(
     });
 
     socketRef.current = socket;
-
+setSocket(socket);
     socket.on("connect", () => {
       setConnected(true);
       socket.emit("join-group", groupChatId); // ← FIXED: kebab-case, string
@@ -187,6 +189,7 @@ socket.on("group_message", handleMessage);
       socket.emit("leave-group", groupChatId); // ← FIXED: kebab-case, string
       socket.disconnect();
       socketRef.current = null;
+      setSocket(null);
       setConnected(false);
     };
   }, [groupChatId, token]);
@@ -273,7 +276,7 @@ socket.on("group_message", handleMessage);
     sendMessage,
     copyInviteLink,
     inviteCopied,
-        socket: socketRef.current, // ← ADD THIS
+       socket,// ← ADD THIS
 
   };
 }
