@@ -7,7 +7,30 @@ const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 // ============================================================================
 // VERIFIED WORKING FREE MODELS (June 2026) — NO :free SUFFIX
 // ============================================================================
+export interface ResearchStep {
+  step: number;
+  status: "running" | "complete" | "error";
+  tool?: string;
+  model?: string;
+  provider?: string;
+  label?: string;
+  sourcesCount?: number;
+  imageUrl?: string;
+  error?: string;
+}
 
+export interface ResearchResult {
+  answer: string;
+  sources: { title: string; url: string; content: string }[];
+  mindMapImageUrl: string | null;
+  followUpQuestions: string[];
+}
+
+export interface ResearchCallbacks {
+  onStep?: (step: ResearchStep) => void;
+  onComplete?: (result: ResearchResult) => void;
+  onError?: (error: string) => void;
+}
 const MODELS = {
   extract: {
     primary: [
@@ -315,182 +338,194 @@ function wantsVisualization(query: string): boolean {
 // MAIN RESEARCH PIPELINE
 // ============================================================================
 
-export async function runResearch(query: string): Promise<ResearchResult> {
+export async function runResearch(query: string, callbacks?: ResearchCallbacks): Promise<ResearchResult> {
   const startTime = Date.now();
   console.log("[research] === START | Query:", query);
 
-  // ── Step 1: Search ───────────────────────────────────────────────────────
-  console.log("[research] Step 1: Searching sources...");
-  let rawSources;
+  const emitStep = (step: ResearchStep) => {
+    callbacks?.onStep?.(step);
+  };
+
   try {
-    rawSources = await searchSources(query);
-  } catch {
-    console.warn("[research] Tavily failed, trying free search...");
-    rawSources = await searchSourcesFree(query);
-  }
-
-  if (rawSources.length === 0) {
-    return {
-      answer: "No sources found for this query.",
-      sources: [],
-      mindMapImageUrl: null,
-      followUpQuestions: ["Try a broader query?", "Check spelling?"],
-    };
-  }
-
-  const sourcesText = rawSources
-    .map((s) => `[${s.index}] ${s.title}: ${s.content.slice(0, 400)}`)
-    .join("\n\n");
-
-  // ── Step 2: Extract facts ────────────────────────────────────────────────
-  console.log("[research] Step 2: Extracting facts...");
-  const extractedAll = await callLLM(
-    [
-      {
-        role: "system",
-        content:
-          "Extract 2-3 concise key facts per source. Format strictly as:\n[1] - fact 1\n[1] - fact 2\n[2] - fact 1\netc. Be factual and concise.",
-      },
-      { role: "user", content: sourcesText },
-    ],
-    {
-      primaryModels: MODELS.extract.primary,
-      fallbackModel: MODELS.extract.fallback,
-      temperature: 0.2,
-      maxTokens: 2048,
+    // ── Step 1: Search ─────────────────────────────────────────────────
+    emitStep({ step: 1, status: "running", tool: "tavily", label: "Searching sources..." });
+    console.log("[research] Step 1: Searching sources...");
+    
+    let rawSources;
+    try {
+      rawSources = await searchSources(query);
+    } catch {
+      emitStep({ step: 1, status: "running", tool: "duckduckgo", label: "Tavily failed, trying free search..." });
+      console.warn("[research] Tavily failed, trying free search...");
+      rawSources = await searchSourcesFree(query);
     }
-  );
 
-  // ── Step 3: Synthesize ───────────────────────────────────────────────────
-  console.log("[research] Step 3: Synthesizing report...");
-
-  const extractedBySource = rawSources
-    .map((s, i) => {
-      const regex = new RegExp(
-        `\\[${i + 1}\\]\\s*-\\s*(.*?)(?=\\[${i + 2}\\]|$)`,
-        "s"
-      );
-      const match = extractedAll.match(regex);
-      const facts =
-        match?.[1]?.trim().split("\n").filter(Boolean).join(" ") ||
-        "Key facts unavailable.";
-      return `[${i + 1}] ${s.title}: ${facts}`;
-    })
-    .join("\n\n");
-
-  const synthesis = await callLLM(
-    [
-      {
-        role: "system",
-        content:
-          "You are a research analyst. Write a structured report with:\n1) Executive Summary (2-3 sentences)\n2) Key Findings (bullet points with [1], [2] citations)\n3) Sources Referenced\nBe concise, factual, and cite every claim.",
-      },
-      {
-        role: "user",
-        content: `Research Query: ${query}\n\nExtracted Facts:\n${extractedBySource}`,
-      },
-    ],
-    {
-      primaryModels: MODELS.synthesize.primary,
-      fallbackModel: MODELS.synthesize.fallback,
-      temperature: 0.3,
-      maxTokens: 4096,
+    if (rawSources.length === 0) {
+      emitStep({ step: 1, status: "error", tool: "search", label: "No sources found" });
+      return {
+        answer: "No sources found for this query.",
+        sources: [],
+        mindMapImageUrl: null,
+        followUpQuestions: ["Try a broader query?", "Check spelling?"],
+      };
     }
-  );
 
-  // ── Step 4: Follow-up questions ──────────────────────────────────────────
-  console.log("[research] Step 4: Generating follow-ups...");
-  const followUpRaw = await callLLM(
-    [
-      {
-        role: "system",
-        content:
-          'Generate 3 relevant follow-up research questions. Return ONLY a JSON object: {"questions":["q1","q2","q3"]}',
-      },
-      {
-        role: "user",
-        content: `Based on this research summary, what should the user explore next?\n\n${synthesis.slice(0, 1200)}`,
-      },
-    ],
-    {
-      primaryModels: MODELS.followUp.primary,
-      fallbackModel: MODELS.followUp.fallback,
-      temperature: 0.4,
-      maxTokens: 512,
-      jsonMode: true,
-    }
-  );
+    emitStep({ step: 1, status: "complete", tool: "tavily", sourcesCount: rawSources.length, label: `${rawSources.length} sources found` });
 
-  let followUpQuestions: string[] = [];
-  try {
-    const parsed = JSON.parse(followUpRaw);
-    followUpQuestions = parsed.questions || parsed;
-  } catch {
-    const match = followUpRaw.match(/\[\s*"[^"]+"\s*(?:,\s*"[^"]+"\s*){2}\]/);
-    if (match) {
-      try {
-        followUpQuestions = JSON.parse(match[0]);
-      } catch {
-        followUpQuestions = [];
+    const sourcesText = rawSources
+      .map((s) => `[${s.index}] ${s.title}: ${s.content.slice(0, 400)}`)
+      .join("\n\n");
+
+    // ── Step 2: Extract facts ──────────────────────────────────────────
+    emitStep({ step: 2, status: "running", model: "openrouter/free", provider: "openrouter", label: "Extracting key facts..." });
+    console.log("[research] Step 2: Extracting facts...");
+    
+    const extractedAll = await callLLM(
+      [
+        {
+          role: "system",
+          content: "Extract 2-3 concise key facts per source. Format strictly as:\n[1] - fact 1\n[1] - fact 2\n[2] - fact 1\netc. Be factual and concise.",
+        },
+        { role: "user", content: sourcesText },
+      ],
+      {
+        primaryModels: MODELS.extract.primary,
+        fallbackModel: MODELS.extract.fallback,
+        temperature: 0.2,
+        maxTokens: 2048,
+      }
+    );
+    emitStep({ step: 2, status: "complete", model: "openrouter/free", provider: "openrouter", label: "Facts extracted" });
+
+    // ── Step 3: Synthesize ─────────────────────────────────────────────
+    emitStep({ step: 3, status: "running", model: "openrouter/free", provider: "openrouter", label: "Synthesizing report..." });
+    console.log("[research] Step 3: Synthesizing report...");
+
+    const extractedBySource = rawSources
+      .map((s, i) => {
+        const regex = new RegExp(`\\[${i + 1}\\]\\s*-\\s*(.*?)(?=\\[${i + 2}\\]|$)`, "s");
+        const match = extractedAll.match(regex);
+        const facts = match?.[1]?.trim().split("\n").filter(Boolean).join(" ") || "Key facts unavailable.";
+        return `[${i + 1}] ${s.title}: ${facts}`;
+      })
+      .join("\n\n");
+
+    const synthesis = await callLLM(
+      [
+        {
+          role: "system",
+          content: "You are a research analyst. Write a structured report with:\n1) Executive Summary (2-3 sentences)\n2) Key Findings (bullet points with [1], [2] citations)\n3) Sources Referenced\nBe concise, factual, and cite every claim.",
+        },
+        {
+          role: "user",
+          content: `Research Query: ${query}\n\nExtracted Facts:\n${extractedBySource}`,
+        },
+      ],
+      {
+        primaryModels: MODELS.synthesize.primary,
+        fallbackModel: MODELS.synthesize.fallback,
+        temperature: 0.3,
+        maxTokens: 4096,
+      }
+    );
+    emitStep({ step: 3, status: "complete", model: "openrouter/free", provider: "openrouter", label: "Report synthesized" });
+
+    // ── Step 4: Follow-ups ─────────────────────────────────────────────
+    emitStep({ step: 4, status: "running", model: "openrouter/free", provider: "openrouter", label: "Generating follow-ups..." });
+    console.log("[research] Step 4: Generating follow-ups...");
+    
+    const followUpRaw = await callLLM(
+      [
+        {
+          role: "system",
+          content: 'Generate 3 relevant follow-up research questions. Return ONLY a JSON object: {"questions":["q1","q2","q3"]}',
+        },
+        {
+          role: "user",
+          content: `Based on this research summary, what should the user explore next?\n\n${synthesis.slice(0, 1200)}`,
+        },
+      ],
+      {
+        primaryModels: MODELS.followUp.primary,
+        fallbackModel: MODELS.followUp.fallback,
+        temperature: 0.4,
+        maxTokens: 512,
+        jsonMode: true,
+      }
+    );
+    emitStep({ step: 4, status: "complete", model: "openrouter/free", provider: "openrouter", label: "Follow-ups ready" });
+
+    let followUpQuestions: string[] = [];
+    try {
+      const parsed = JSON.parse(followUpRaw);
+      followUpQuestions = parsed.questions || parsed;
+    } catch {
+      const match = followUpRaw.match(/\[\s*"[^"]+"\s*(?:,\s*"[^"]+"\s*){2}\]/);
+      if (match) {
+        try { followUpQuestions = JSON.parse(match[0]); } catch { /* ignore */ }
+      }
+      if (followUpQuestions.length === 0) {
+        followUpQuestions = ["Latest developments?", "Alternative approaches?", "Potential risks?"];
       }
     }
-    if (followUpQuestions.length === 0) {
-      followUpQuestions = [
-        "Latest developments?",
-        "Alternative approaches?",
-        "Potential risks?",
-      ];
-    }
-  }
 
-  // ── Step 5: Image generation (conditional) ─────────────────────────────
-  let mindMapImageUrl: string | null = null;
+    // ── Step 5: Image (conditional) ────────────────────────────────────
+    let mindMapImageUrl: string | null = null;
 
-  if (wantsVisualization(query)) {
-    console.log("[research] Step 5: Generating visualization...");
-    try {
-      const imagePrompt = await callLLM(
-        [
+    if (wantsVisualization(query)) {
+      emitStep({ step: 5, status: "running", tool: "pollinations", label: "Generating visualization..." });
+      console.log("[research] Step 5: Generating visualization...");
+      
+      try {
+        const imagePrompt = await callLLM(
+          [
+            {
+              role: "system",
+              content: "Write a detailed 80-word image generation prompt for a mind map. Include: clean white background, interconnected nodes, color-coded branches, arrows, professional infographic style, high detail.",
+            },
+            { role: "user", content: `Topic: ${query}` },
+          ],
           {
-            role: "system",
-            content:
-              "Write a detailed 80-word image generation prompt for a mind map. Include: clean white background, interconnected nodes, color-coded branches, arrows, professional infographic style, high detail.",
-          },
-          { role: "user", content: `Topic: ${query}` },
-        ],
-        {
-          primaryModels: MODELS.imagePrompt.primary,
-          fallbackModel: MODELS.imagePrompt.fallback,
-          temperature: 0.5,
-          maxTokens: 256,
-        }
-      );
+            primaryModels: MODELS.imagePrompt.primary,
+            fallbackModel: MODELS.imagePrompt.fallback,
+            temperature: 0.5,
+            maxTokens: 256,
+          }
+        );
 
-      mindMapImageUrl = generateFreeImage(imagePrompt);
-      console.log("[research] Image URL:", mindMapImageUrl);
-    } catch (imgErr: any) {
-      console.warn("[research] Image prompt gen failed:", imgErr.message);
-      mindMapImageUrl = null;
+        mindMapImageUrl = generateFreeImage(imagePrompt);
+        emitStep({ step: 5, status: "complete", tool: "pollinations", imageUrl: mindMapImageUrl, label: "Visualization ready" });
+        console.log("[research] Image URL:", mindMapImageUrl);
+      } catch (imgErr: any) {
+        emitStep({ step: 5, status: "error", tool: "pollinations", label: "Image generation failed" });
+        console.warn("[research] Image prompt gen failed:", imgErr.message);
+        mindMapImageUrl = null;
+      }
+    } else {
+      emitStep({ step: 5, status: "complete", label: "No visualization requested" });
+      console.log("[research] Step 5: No visualization requested.");
     }
-  } else {
-    console.log("[research] Step 5: No visualization requested.");
+
+    // ── Return ─────────────────────────────────────────────────────────
+    const result: ResearchResult = {
+      answer: synthesis,
+      sources: rawSources.map((s) => ({ title: s.title, url: s.url, content: s.content })),
+      mindMapImageUrl,
+      followUpQuestions,
+    };
+
+    callbacks?.onComplete?.(result);
+
+    const duration = Date.now() - startTime;
+    console.log(`[research] === COMPLETE in ${duration}ms ===`);
+    return result;
+
+  } catch (error: any) {
+    callbacks?.onError?.(error.message);
+    console.error("[research] Pipeline failed:", error.message);
+    throw error;
   }
-
-  const duration = Date.now() - startTime;
-  console.log(`[research] === COMPLETE in ${duration}ms ===`);
-
-  return {
-    answer: synthesis,
-    sources: rawSources.map((s) => ({
-      title: s.title,
-      url: s.url,
-      content: s.content,
-    })),
-    mindMapImageUrl,
-    followUpQuestions,
-  };
 }
-
 // ============================================================================
 // BATCH RESEARCH
 // ============================================================================
@@ -501,3 +536,5 @@ export async function runBatchResearch(
   console.log("[research] Batch started:", queries.length, "queries");
   return Promise.all(queries.map((q) => runResearch(q)));
 }
+
+

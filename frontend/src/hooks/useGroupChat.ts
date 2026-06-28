@@ -23,6 +23,8 @@ export interface UseGroupChatReturn {
   sendMessage: (content: string) => void;
   copyInviteLink: () => Promise<void>;
   inviteCopied: boolean;
+    socket: Socket | null; // ← ADD THIS
+
 }
 
 export function useGroupChat(
@@ -195,6 +197,7 @@ socket.on("group_message", handleMessage);
       if (!groupChatId || !token || !content.trim()) return;
 
       const tempId = crypto.randomUUID();
+    const socketId = socketRef.current?.id; // ← GET SOCKET ID
 
       // Build optimistic message with tempId stored for reconciliation
       const optimisticMsg: GroupMessage & { tempId: string } = {
@@ -220,7 +223,7 @@ socket.on("group_message", handleMessage);
       setSending(true);
 
       try {
-        await postGroupMessage(token, groupChatId, content.trim(),tempId);
+        await postGroupMessage(token, groupChatId, content.trim(),tempId, socketId);
         // Fallback: if socket event is delayed/missed, clear sending after 3s
         setTimeout(() => setSending(false), 3000);
       } catch (err: any) {
@@ -270,5 +273,7 @@ socket.on("group_message", handleMessage);
     sendMessage,
     copyInviteLink,
     inviteCopied,
+        socket: socketRef.current, // ← ADD THIS
+
   };
 }

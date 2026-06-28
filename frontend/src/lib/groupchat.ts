@@ -152,11 +152,13 @@ export async function postGroupMessage(
   groupId: string,
   content: string,
   tempId : string,
+    socketId?: string // ← ADD THIS
+
 ): Promise<{ status: string; tempId: string }> {
   const res = await fetch(`${API_BASE}/${groupId}/message`, {
     method: "POST",
     headers: getHeaders(token),
-    body: JSON.stringify({ content,tempId }),
+    body: JSON.stringify({ content, tempId, socketId }), // ← SEND IT
   });
   if (!res.ok) {
     const error = await res.json();

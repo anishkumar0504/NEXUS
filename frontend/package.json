@@ -10,8 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@lobehub/icons": "^5.10.0",
     "@supabase/supabase-js": "^2.106.2",
     "axios": "^1.16.1",
+    "framer-motion": "^12.42.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-router-dom": "^7.16.0",
