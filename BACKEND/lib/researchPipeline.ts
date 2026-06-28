@@ -1,148 +1,503 @@
 import { tavily } from "@tavily/core";
-import { callGroq } from "./groqClient.js";
-import { generateImage } from "./imageClient.js";
 
 const tvly = tavily({ apiKey: process.env.TAVILY_API_KEY });
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+
+// ============================================================================
+// VERIFIED WORKING FREE MODELS (June 2026) — NO :free SUFFIX
+// ============================================================================
+
+const MODELS = {
+  extract: {
+    primary: [
+      "openrouter/free",                    // Auto-router — always works
+      "meta-llama/llama-4-scout",           // Fast, 128K
+      "google/gemma-3-27b-it",              // Lightweight
+      "mistralai/mistral-small-3.1-24b-instruct", // Balanced
+    ],
+    fallback: "llama-3.1-8b-instant",      // Groq
+  },
+  synthesize: {
+    primary: [
+      "openrouter/free",                    // Auto-router
+      "nvidia/nemotron-3-super",            // 1M context, strong reasoning
+      "meta-llama/llama-4-maverick",        // 1M context, multimodal
+      "deepseek/deepseek-r1",               // Strong reasoning (slower)
+      "qwen/qwen3-235b-a22b",               // Coding/analysis
+    ],
+    fallback: "llama-3.3-70b-versatile",     // Groq
+  },
+  followUp: {
+    primary: [
+      "openrouter/free",
+      "meta-llama/llama-4-scout",
+      "google/gemma-3-27b-it",
+      "x-ai/grok-3-mini-beta",              // Fast responses
+    ],
+    fallback: "llama-3.1-8b-instant",       // Groq
+  },
+  imagePrompt: {
+    primary: [
+      "openrouter/free",
+      "meta-llama/llama-4-scout",
+      "google/gemma-3-27b-it",
+    ],
+    fallback: "llama-3.1-8b-instant",       // Groq
+  },
+} as const;
+
+// ============================================================================
+// OPENROUTER CLIENT
+// ============================================================================
+
+const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+
+async function callOpenRouter(
+  messages: { role: string; content: string }[],
+  model: string,
+  options: {
+    temperature?: number;
+    maxTokens?: number;
+    jsonMode?: boolean;
+    retries?: number;
+  } = {}
+): Promise<string> {
+  const {
+    temperature = 0.3,
+    maxTokens = 4096,
+    jsonMode = false,
+    retries = 2,
+  } = options;
+
+  console.log("[openrouter] Model:", model);
+
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const body: any = {
+        model,
+        messages,
+        temperature,
+        max_tokens: maxTokens,
+      };
+      if (jsonMode) body.response_format = { type: "json_object" };
+
+      const response = await fetch(OPENROUTER_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+          "HTTP-Referer": "https://nexus-chat.app",
+          "X-Title": "Nexus Research Agent",
+        },
+        body: JSON.stringify(body),
+      });
+
+      console.log("[openrouter] Status:", response.status);
+
+      if (response.ok) {
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content;
+        if (!content) throw new Error("Empty response");
+        return content;
+      }
+
+      const errText = await response.text();
+
+      // 404 = model dead/unavailable — don't retry, skip to next model
+      if (response.status === 404) {
+        console.warn(`[openrouter] Model ${model} unavailable (404)`);
+        throw new Error(`MODEL_DEAD: ${model}`);
+      }
+
+      // 429/503 = rate limit or overload — retry with backoff
+      if ((response.status === 429 || response.status === 503) && i < retries) {
+        const delay = Math.pow(2, i) * 2000 + Math.random() * 1000;
+        console.warn(`[openrouter] ${response.status}, retrying in ${delay}ms...`);
+        await new Promise((r) => setTimeout(r, delay));
+        continue;
+      }
+
+      throw new Error(`OpenRouter HTTP ${response.status}: ${errText}`);
+
+    } catch (err: any) {
+      console.error("[openrouter] Error:", err.message);
+      // Don't retry on MODEL_DEAD — bubble up immediately
+      if (err.message.includes("MODEL_DEAD")) throw err;
+      if (i === retries) throw err;
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+  }
+
+  throw new Error(`OpenRouter failed for ${model}`);
+}
+
+// ============================================================================
+// GROQ CLIENT (fallback)
+// ============================================================================
+
+async function callGroq(
+  messages: { role: string; content: string }[],
+  model: string,
+  options: {
+    temperature?: number;
+    maxTokens?: number;
+    jsonMode?: boolean;
+    retries?: number;
+  } = {}
+): Promise<string> {
+  const {
+    temperature = 0.3,
+    maxTokens = 4096,
+    jsonMode = false,
+    retries = 2,
+  } = options;
+
+  console.log("[groq] Model:", model);
+
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const body: any = {
+        model,
+        messages,
+        temperature,
+        max_tokens: maxTokens,
+      };
+      if (jsonMode) body.response_format = { type: "json_object" };
+
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${GROQ_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.choices[0].message.content;
+      }
+
+      if (response.status === 429 && i < retries) {
+        const errText = await response.text();
+        const retryMatch = errText.match(/try again in ([\d.]+)s/);
+        const delay = retryMatch
+          ? parseFloat(retryMatch[1]) * 1000 + 500
+          : Math.pow(2, i) * 2000;
+        console.warn(`[groq] Rate limited, retrying in ${delay}ms...`);
+        await new Promise((r) => setTimeout(r, delay));
+        continue;
+      }
+
+      const err = await response.text();
+      throw new Error(`Groq HTTP ${response.status}: ${err}`);
+
+    } catch (err: any) {
+      console.error("[groq] Error:", err.message);
+      if (i === retries) throw err;
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+  }
+
+  throw new Error(`Groq failed for ${model}`);
+}
+
+// ============================================================================
+// HYBRID CALLER — OpenRouter primary, Groq fallback
+// ============================================================================
+
+async function callLLM(
+  messages: { role: string; content: string }[],
+  config: {
+    primaryModels: string[];
+    fallbackModel: string;
+    temperature?: number;
+    maxTokens?: number;
+    jsonMode?: boolean;
+  }
+): Promise<string> {
+  const { primaryModels, fallbackModel, temperature, maxTokens, jsonMode } = config;
+
+  // Try each OpenRouter model in order
+  for (const model of primaryModels) {
+    try {
+      console.log(`[llm] Trying OpenRouter: ${model}`);
+      const result = await callOpenRouter(messages, model, {
+        temperature,
+        maxTokens,
+        jsonMode,
+      });
+      console.log(`[llm] ✅ OpenRouter success: ${model}`);
+      return result;
+    } catch (err: any) {
+      console.warn(`[llm] ❌ OpenRouter failed (${model}):`, err.message);
+      // MODEL_DEAD or other fatal error — skip to next model immediately
+    }
+  }
+
+  // All OpenRouter models failed — fallback to Groq
+  console.log(`[llm] Falling back to Groq: ${fallbackModel}`);
+  try {
+    const result = await callGroq(messages, fallbackModel, {
+      temperature,
+      maxTokens,
+      jsonMode,
+    });
+    console.log(`[llm] ✅ Groq fallback success: ${fallbackModel}`);
+    return result;
+  } catch (err: any) {
+    console.error(`[llm] ❌ Groq fallback failed:`, err.message);
+    throw new Error(`All LLM providers failed. Last error: ${err.message}`);
+  }
+}
+
+// ============================================================================
+// SEARCH
+// ============================================================================
+
+async function searchSources(query: string) {
+  const searchResult = await tvly.search(query, {
+    searchDepth: "advanced",
+    maxResults: 5,
+    includeAnswer: true,
+  });
+
+  return searchResult.results.map((r, i) => ({
+    index: i + 1,
+    title: r.title,
+    url: r.url,
+    content: r.content.slice(0, 600),
+  }));
+}
+
+async function searchSourcesFree(query: string) {
+  const { search } = await import("duck-duck-scraper");
+  const results = await search(query);
+  return results.slice(0, 5).map((r: any, i: number) => ({
+    index: i + 1,
+    title: r.title,
+    url: r.url,
+    content: r.description?.slice(0, 600) || "",
+  }));
+}
+
+// ============================================================================
+// IMAGE GENERATION (Pollinations — free, no key)
+// ============================================================================
+
+function generateFreeImage(prompt: string): string {
+  const encoded = encodeURIComponent(prompt);
+  return `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&nologo=true&seed=${Date.now()}`;
+}
+
+// ============================================================================
+// TYPES & UTILS
+// ============================================================================
 
 export interface ResearchResult {
   answer: string;
   sources: { title: string; url: string; content: string }[];
-  mindMapImageUrl: string;
+  mindMapImageUrl: string | null;
   followUpQuestions: string[];
 }
 
+function wantsVisualization(query: string): boolean {
+  const lower = query.toLowerCase();
+  const keywords = [
+    "mind map", "mindmap", "diagram", "flowchart", "chart",
+    "visual", "image", "picture", "infographic", "map", "graph",
+  ];
+  return keywords.some((kw) => lower.includes(kw));
+}
+
+// ============================================================================
+// MAIN RESEARCH PIPELINE
+// ============================================================================
+
 export async function runResearch(query: string): Promise<ResearchResult> {
-  // ── Step 1: Deep Web Search with Tavily ─────────────────────
-  const searchResult = await tvly.search(query, {
-    searchDepth: "advanced",
-    maxResults: 8,
-    includeAnswer: true,
-    includeImages: false,
-  });
+  const startTime = Date.now();
+  console.log("[research] === START | Query:", query);
 
-  const rawSources = searchResult.results.map((r, i) => ({
-    index: i + 1,
-    title: r.title,
-    url: r.url,
-    content: r.content,
-  }));
-
-  // ── Step 2: Planner Agent (Groq 8B) ─────────────────────────
-  // Plans the research structure
-  const plan = await callGroq([
-    {
-      role: "system",
-      content: `You are a research planner. Given a query and raw sources, create a structured research plan.
-Output ONLY a JSON object with this structure:
-{
-  "sections": ["section1", "section2", ...],
-  "keyThemes": ["theme1", "theme2", ...],
-  "visualizationType": "mind_map|flowchart|timeline|comparison_table"
-}`,
-    },
-    {
-      role: "user",
-      content: `Query: ${query}\n\nSources count: ${rawSources.length}\n\nTop source titles:\n${rawSources.slice(0, 3).map(s => `- ${s.title}`).join("\n")}`,
-    },
-  ], "llama-3.1-8b-instant");
-
-  let researchPlan: any;
+  // ── Step 1: Search ───────────────────────────────────────────────────────
+  console.log("[research] Step 1: Searching sources...");
+  let rawSources;
   try {
-    researchPlan = JSON.parse(plan);
+    rawSources = await searchSources(query);
   } catch {
-    researchPlan = {
-      sections: ["Overview", "Key Findings", "Implications", "Sources"],
-      keyThemes: [query],
-      visualizationType: "mind_map",
+    console.warn("[research] Tavily failed, trying free search...");
+    rawSources = await searchSourcesFree(query);
+  }
+
+  if (rawSources.length === 0) {
+    return {
+      answer: "No sources found for this query.",
+      sources: [],
+      mindMapImageUrl: null,
+      followUpQuestions: ["Try a broader query?", "Check spelling?"],
     };
   }
 
-  // ── Step 3: Context Processor Agent (Groq 8B) ───────────────
-  // Extracts and organizes key information from each source
-  const contexts = await Promise.all(
-    rawSources.map(async (source) => {
-      const extracted = await callGroq([
-        {
-          role: "system",
-          content: "Extract 3-5 key facts from this source. Be concise and factual. Output as bullet points.",
-        },
-        {
-          role: "user",
-          content: `Title: ${source.title}\nContent: ${source.content}`,
-        },
-      ], "llama-3.1-8b-instant");
-      return { ...source, extracted };
-    })
+  const sourcesText = rawSources
+    .map((s) => `[${s.index}] ${s.title}: ${s.content.slice(0, 400)}`)
+    .join("\n\n");
+
+  // ── Step 2: Extract facts ────────────────────────────────────────────────
+  console.log("[research] Step 2: Extracting facts...");
+  const extractedAll = await callLLM(
+    [
+      {
+        role: "system",
+        content:
+          "Extract 2-3 concise key facts per source. Format strictly as:\n[1] - fact 1\n[1] - fact 2\n[2] - fact 1\netc. Be factual and concise.",
+      },
+      { role: "user", content: sourcesText },
+    ],
+    {
+      primaryModels: MODELS.extract.primary,
+      fallbackModel: MODELS.extract.fallback,
+      temperature: 0.2,
+      maxTokens: 2048,
+    }
   );
 
-  // ── Step 4: Synthesizer Agent (Groq 70B) ────────────────────
-  // Creates the final comprehensive answer
-  const fullContext = contexts
-    .map((c) => `[${c.index}] ${c.title}\nKey facts:\n${c.extracted}\nURL: ${c.url}`)
-    .join("\n\n---\n\n");
+  // ── Step 3: Synthesize ───────────────────────────────────────────────────
+  console.log("[research] Step 3: Synthesizing report...");
 
-  const synthesis = await callGroq([
-    {
-      role: "system",
-      content: `You are a research synthesizer. Create a comprehensive, well-structured research report.
-Follow this structure:
-1. **Executive Summary** (2-3 sentences)
-2. ${researchPlan.sections.map((s: string) => `**${s}**`).join("\n2. ")}
-3. **Sources** (numbered list with URLs)
+  const extractedBySource = rawSources
+    .map((s, i) => {
+      const regex = new RegExp(
+        `\\[${i + 1}\\]\\s*-\\s*(.*?)(?=\\[${i + 2}\\]|$)`,
+        "s"
+      );
+      const match = extractedAll.match(regex);
+      const facts =
+        match?.[1]?.trim().split("\n").filter(Boolean).join(" ") ||
+        "Key facts unavailable.";
+      return `[${i + 1}] ${s.title}: ${facts}`;
+    })
+    .join("\n\n");
 
-Use citations [1], [2], etc. matching the provided sources.
-Be thorough but concise. Highlight key insights with bold text.`,
-    },
+  const synthesis = await callLLM(
+    [
+      {
+        role: "system",
+        content:
+          "You are a research analyst. Write a structured report with:\n1) Executive Summary (2-3 sentences)\n2) Key Findings (bullet points with [1], [2] citations)\n3) Sources Referenced\nBe concise, factual, and cite every claim.",
+      },
+      {
+        role: "user",
+        content: `Research Query: ${query}\n\nExtracted Facts:\n${extractedBySource}`,
+      },
+    ],
     {
-      role: "user",
-      content: `Research Query: ${query}\n\nSources and Extracted Facts:\n${fullContext}`,
-    },
-  ], "llama-3.3-70b-versatile");
+      primaryModels: MODELS.synthesize.primary,
+      fallbackModel: MODELS.synthesize.fallback,
+      temperature: 0.3,
+      maxTokens: 4096,
+    }
+  );
 
-  // ── Step 5: Follow-up Question Generator (Groq 8B) ──────────
-  const followUpRaw = await callGroq([
+  // ── Step 4: Follow-up questions ──────────────────────────────────────────
+  console.log("[research] Step 4: Generating follow-ups...");
+  const followUpRaw = await callLLM(
+    [
+      {
+        role: "system",
+        content:
+          'Generate 3 relevant follow-up research questions. Return ONLY a JSON object: {"questions":["q1","q2","q3"]}',
+      },
+      {
+        role: "user",
+        content: `Based on this research summary, what should the user explore next?\n\n${synthesis.slice(0, 1200)}`,
+      },
+    ],
     {
-      role: "system",
-      content: "Based on this research, suggest 3 follow-up questions the user might want to explore. Output as a JSON array of strings.",
-    },
-    { role: "user", content: synthesis },
-  ], "llama-3.1-8b-instant");
+      primaryModels: MODELS.followUp.primary,
+      fallbackModel: MODELS.followUp.fallback,
+      temperature: 0.4,
+      maxTokens: 512,
+      jsonMode: true,
+    }
+  );
 
   let followUpQuestions: string[] = [];
   try {
-    followUpQuestions = JSON.parse(followUpRaw);
+    const parsed = JSON.parse(followUpRaw);
+    followUpQuestions = parsed.questions || parsed;
   } catch {
-    followUpQuestions = [
-      "What are the latest developments in this area?",
-      "How does this compare to alternative approaches?",
-      "What are the potential risks or limitations?",
-    ];
+    const match = followUpRaw.match(/\[\s*"[^"]+"\s*(?:,\s*"[^"]+"\s*){2}\]/);
+    if (match) {
+      try {
+        followUpQuestions = JSON.parse(match[0]);
+      } catch {
+        followUpQuestions = [];
+      }
+    }
+    if (followUpQuestions.length === 0) {
+      followUpQuestions = [
+        "Latest developments?",
+        "Alternative approaches?",
+        "Potential risks?",
+      ];
+    }
   }
 
-  // ── Step 6: Visualizer Agent ────────────────────────────────
-  // Generates mind map / flowchart image
-  const mindMapPrompt = await callGroq([
-    {
-      role: "system",
-      content: `Create a detailed image generation prompt for a ${researchPlan.visualizationType} visualizing this research.
-Requirements:
-- Clean, professional design
-- Clear nodes with labels
-- Connected with lines/arrows
-- Color-coded sections
-- White or light background
-- Text must be readable
-- No photorealistic elements, diagram style only`,
-    },
-    { role: "user", content: synthesis.slice(0, 2000) },
-  ], "llama-3.1-8b-instant");
+  // ── Step 5: Image generation (conditional) ─────────────────────────────
+  let mindMapImageUrl: string | null = null;
 
-  const mindMapImageUrl = await generateImage(mindMapPrompt);
+  if (wantsVisualization(query)) {
+    console.log("[research] Step 5: Generating visualization...");
+    try {
+      const imagePrompt = await callLLM(
+        [
+          {
+            role: "system",
+            content:
+              "Write a detailed 80-word image generation prompt for a mind map. Include: clean white background, interconnected nodes, color-coded branches, arrows, professional infographic style, high detail.",
+          },
+          { role: "user", content: `Topic: ${query}` },
+        ],
+        {
+          primaryModels: MODELS.imagePrompt.primary,
+          fallbackModel: MODELS.imagePrompt.fallback,
+          temperature: 0.5,
+          maxTokens: 256,
+        }
+      );
+
+      mindMapImageUrl = generateFreeImage(imagePrompt);
+      console.log("[research] Image URL:", mindMapImageUrl);
+    } catch (imgErr: any) {
+      console.warn("[research] Image prompt gen failed:", imgErr.message);
+      mindMapImageUrl = null;
+    }
+  } else {
+    console.log("[research] Step 5: No visualization requested.");
+  }
+
+  const duration = Date.now() - startTime;
+  console.log(`[research] === COMPLETE in ${duration}ms ===`);
 
   return {
     answer: synthesis,
-    sources: rawSources.map((s) => ({ title: s.title, url: s.url, content: s.content })),
+    sources: rawSources.map((s) => ({
+      title: s.title,
+      url: s.url,
+      content: s.content,
+    })),
     mindMapImageUrl,
     followUpQuestions,
   };
+}
+
+// ============================================================================
+// BATCH RESEARCH
+// ============================================================================
+
+export async function runBatchResearch(
+  queries: string[]
+): Promise<ResearchResult[]> {
+  console.log("[research] Batch started:", queries.length, "queries");
+  return Promise.all(queries.map((q) => runResearch(q)));
 }
