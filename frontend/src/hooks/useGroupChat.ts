@@ -201,6 +201,7 @@ socket.on("group_message", handleMessage);
 
       const tempId = crypto.randomUUID();
     const socketId = socketRef.current?.id; // ← GET SOCKET ID
+console.log("[sendMessage] socketId:", socketId); // ← ADD THIS DEBUG
 
       // Build optimistic message with tempId stored for reconciliation
       const optimisticMsg: GroupMessage & { tempId: string } = {
