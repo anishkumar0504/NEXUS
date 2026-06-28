@@ -5,7 +5,7 @@ import { ChatHeader } from "./ChatHeader";
 import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
 import { EmptyState } from "./EmptyState";
-import { useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 interface ChatPageProps {
   groupChatId: string | null;
@@ -28,21 +28,43 @@ export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPage
     inviteCopied,
     socket,
   } = useGroupChat(groupChatId, token, currentUserId);
- console.log("[ChatPage] socket:", socket?.id || "null");
-  console.log("[ChatPage] socket connected:", socket?.connected || false);
 
-  // Find active research job from messages
-  const activeResearchJobId = useMemo(() => {
-    const last = [...messages]
-      .reverse()
-      .find((m) => 
-        m.senderType === "AGENT" && 
-        m.agent?.name === "research" &&
-        !(m as any).isComplete &&
-        !!(m as any).jobId
-      );
-    return (last as any)?.jobId || null;
-  }, [messages]);
+  // Track active research jobs directly from socket events
+  const [researchJobId, setResearchJobId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleStep = (data: any) => {
+      console.log("[ChatPage] research:step:", data);
+      setResearchJobId(data.jobId);
+    };
+
+    const handleComplete = (data: any) => {
+      console.log("[ChatPage] research:complete:", data);
+      // Clear after 3 seconds
+      setTimeout(() => setResearchJobId((prev) => 
+        prev === data.jobId ? null : prev
+      ), 3000);
+    };
+
+    const handleError = (data: any) => {
+      console.log("[ChatPage] research:error:", data);
+      setTimeout(() => setResearchJobId((prev) => 
+        prev === data.jobId ? null : prev
+      ), 3000);
+    };
+
+    socket.on("research:step", handleStep);
+    socket.on("research:complete", handleComplete);
+    socket.on("research:error", handleError);
+
+    return () => {
+      socket.off("research:step", handleStep);
+      socket.off("research:complete", handleComplete);
+      socket.off("research:error", handleError);
+    };
+  }, [socket]);
 
   const activeAgentName = messages
     .filter((m) => m.senderType === "AGENT")
@@ -82,10 +104,10 @@ export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPage
         onSendMessage={sendMessage}
       />
 
-      {/* Research panel — only when active job and socket ready */}
-      {activeResearchJobId && socket && (
+      {/* Research panel — shows when active research job */}
+      {researchJobId && socket && (
         <div className="px-4 py-2">
-          <ResearchAgentPanel jobId={activeResearchJobId} socket={socket} />
+          <ResearchAgentPanel jobId={researchJobId} socket={socket} />
         </div>
       )}
 
