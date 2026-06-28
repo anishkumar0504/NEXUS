@@ -12,8 +12,8 @@ interface MessageListProps {
   currentUserId: string | null;
   agentThinking: boolean;
   activeAgentName?: string;
-  onSelectPlanOption?: (option: string) => void;
-  onSendMessage?: (content: string) => void; // <-- ADD THIS
+  onSelectPlanOption: (option: string) => void;
+  onSendMessage: (content: string) => void;
 }
 
 function shouldShowAvatar(messages: GroupMessage[], idx: number): boolean {

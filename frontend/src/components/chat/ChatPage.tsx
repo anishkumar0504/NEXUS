@@ -1,9 +1,11 @@
 // src/components/chat/ChatPage.tsx
 import { useGroupChat } from "../../hooks/useGroupChat";
+import { ResearchAgentPanel } from "../ResearchAgentPanel";
 import { ChatHeader } from "./ChatHeader";
 import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
 import { EmptyState } from "./EmptyState";
+import { useMemo } from "react";
 
 interface ChatPageProps {
   groupChatId: string | null;
@@ -24,7 +26,21 @@ export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPage
     sendMessage,
     copyInviteLink,
     inviteCopied,
+    socket,
   } = useGroupChat(groupChatId, token, currentUserId);
+
+  // Find active research job from messages
+  const activeResearchJobId = useMemo(() => {
+    const last = [...messages]
+      .reverse()
+      .find((m) => 
+        m.senderType === "AGENT" && 
+        m.agent?.name === "research" &&
+        !(m as any).isComplete &&
+        !!(m as any).jobId
+      );
+    return (last as any)?.jobId || null;
+  }, [messages]);
 
   const activeAgentName = messages
     .filter((m) => m.senderType === "AGENT")
@@ -53,17 +69,23 @@ export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPage
         onCopyInvite={copyInviteLink}
       />
 
-   <MessageList
-  messages={messages}
-  loading={loading}
-  error={error}
-  currentUserId={currentUserId}
-  agentThinking={agentThinking}
-  activeAgentName={activeAgentName}
-  onSelectPlanOption={handleSelectPlanOption}
-    onSendMessage={sendMessage}  // <-- ADD THIS
+      <MessageList
+        messages={messages}
+        loading={loading}
+        error={error}
+        currentUserId={currentUserId}
+        agentThinking={agentThinking}
+        activeAgentName={activeAgentName}
+        onSelectPlanOption={handleSelectPlanOption}
+        onSendMessage={sendMessage}
+      />
 
-/>
+      {/* Research panel — only when active job and socket ready */}
+      {activeResearchJobId && socket && (
+        <div className="px-4 py-2">
+          <ResearchAgentPanel jobId={activeResearchJobId} socket={socket} />
+        </div>
+      )}
 
       <ChatInput
         connected={connected}

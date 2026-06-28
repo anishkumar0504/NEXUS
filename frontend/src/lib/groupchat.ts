@@ -41,11 +41,14 @@ export interface GroupMessage {
     email: string;
     provider: string;
   } | null;
-  agent: {
+ agent?: {
     id: string;
     name: string;
-    type: string;
   } | null;
+  // ADD THESE:
+  jobId?: string;      // ← for tracking research jobs
+  isComplete?: boolean; // ← for research completion state
+  tempId?: string;     // ← if not already there
 }
 
 export interface GroupChat {
