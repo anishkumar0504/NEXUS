@@ -28,6 +28,8 @@ export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPage
     inviteCopied,
     socket,
   } = useGroupChat(groupChatId, token, currentUserId);
+ console.log("[ChatPage] socket:", socket?.id || "null");
+  console.log("[ChatPage] socket connected:", socket?.connected || false);
 
   // Find active research job from messages
   const activeResearchJobId = useMemo(() => {

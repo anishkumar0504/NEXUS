@@ -84,16 +84,24 @@ function ModelBadge({ entity }: { entity: string }) {
 }
 
 export function ResearchAgentPanel({ jobId, socket }: ResearchAgentPanelProps) {
+    console.log("[ResearchAgentPanel] Mounted with jobId:", jobId, "socket:", socket?.id);
   const [steps, setSteps] = useState<ResearchStep[]>([]);
   const [currentStep, setCurrentStep] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
 
   useEffect(() => {
-    if (!socket) return;
-
+     console.log("[ResearchAgentPanel] useEffect running, socket:", socket?.id, "connected:", socket?.connected);
+   if (!socket) {
+      console.log("[ResearchAgentPanel] No socket, skipping listeners");
+      return;
+    }
     const handleStep = (data: ResearchStep & { jobId: string }) => {
-      if (data.jobId !== jobId) return;
+              console.log("[ResearchAgentPanel] received research:step:", data);
 
+     if (data.jobId !== jobId) {
+        console.log("[ResearchAgentPanel] jobId mismatch, ignoring");
+        return;
+      }
       setSteps((prev) => {
         const existing = prev.findIndex((s) => s.step === data.step);
         if (existing >= 0) {
@@ -110,6 +118,8 @@ export function ResearchAgentPanel({ jobId, socket }: ResearchAgentPanelProps) {
     };
 
     const handleComplete = (data: { jobId: string }) => {
+              console.log("[ResearchAgentPanel] received research:complete:", data);
+
       if (data.jobId === jobId) {
         setIsComplete(true);
         setCurrentStep(0);
