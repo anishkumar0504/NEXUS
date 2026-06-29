@@ -12,13 +12,15 @@
   "dependencies": {
     "@lobehub/icons": "^5.10.0",
     "@supabase/supabase-js": "^2.106.2",
+    "@tailwindcss/vite": "^4.3.1",
     "axios": "^1.16.1",
     "framer-motion": "^12.42.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-router-dom": "^7.16.0",
     "simple-icons": "^16.24.1",
-    "socket.io-client": "^4.8.3"
+    "socket.io-client": "^4.8.3",
+    "tailwindcss": "^4.3.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
