@@ -2,6 +2,7 @@
 import { useRef, useEffect } from "react";
 import { MessageBubble } from "./MessageBubble";
 import { AgentThinking } from "./AgentThinking";
+import { ResearchAgentPanel } from "../ResearchAgentPanel";
 import type { GroupMessage } from "../../lib/groupchat";
 import { PlanCard } from "./PlanCard";
 
@@ -14,7 +15,8 @@ interface MessageListProps {
   activeAgentName?: string;
   onSelectPlanOption: (option: string) => void;
   onSendMessage: (content: string) => void;
-  researchPanel?: React.ReactNode;
+  researchJobId?: string | null;
+  socket?: any;
 }
 
 function shouldShowAvatar(messages: GroupMessage[], idx: number): boolean {
@@ -64,13 +66,15 @@ export function MessageList({
   agentThinking,
   activeAgentName,
   onSelectPlanOption,
-  onSendMessage, // <-- ADD THIS
+  onSendMessage,
+  researchJobId,
+  socket,
 }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, agentThinking]);
+  }, [messages, agentThinking, researchJobId]);
 
   return (
     <div className="chat-messages">
@@ -132,7 +136,7 @@ export function MessageList({
               {/* Research-specific rendering */}
               {isResearch && msg.sources && (
                 <div className={`research-wrapper ${msg.userId === currentUserId ? "self" : "other"}`}>
-                  
+
                   {/* Citations */}
                   {msg.sources.citations && msg.sources.citations.length > 0 && (
                     <div className="research-section">
@@ -205,6 +209,22 @@ export function MessageList({
             </div>
           );
         })}
+
+      {/* Inline Research Agent Panel — appears as a message in the stream */}
+      {researchJobId && socket && (
+        <div className="research-agent-message">
+          <div className="research-agent-avatar">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
+          </div>
+          <div className="research-agent-content">
+            <div className="research-agent-name">Research Agent</div>
+            <ResearchAgentPanel jobId={researchJobId} socket={socket} />
+          </div>
+        </div>
+      )}
 
       {agentThinking && <AgentThinking agentName={activeAgentName} />}
 
@@ -340,6 +360,42 @@ export function MessageList({
         }
         .followup-btn:hover .followup-arrow {
           color: white;
+        }
+
+        /* ─── Inline Research Agent Message ─── */
+        .research-agent-message {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          margin-bottom: 8px;
+          padding: 0 20px;
+        }
+        .research-agent-avatar {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, var(--accent-glow), rgba(99,102,241,0.08));
+          border: 1px solid rgba(99,102,241,0.15);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          margin-top: 2px;
+        }
+        .research-agent-content {
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+        .research-agent-name {
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: var(--accent);
+          font-family: var(--font);
+          letter-spacing: 0.02em;
+          padding-left: 2px;
         }
       `}</style>
     </div>

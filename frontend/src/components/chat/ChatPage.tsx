@@ -5,7 +5,7 @@ import { ChatHeader } from "./ChatHeader";
 import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
 import { EmptyState } from "./EmptyState";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 
 interface ChatPageProps {
   groupChatId: string | null;
@@ -14,7 +14,8 @@ interface ChatPageProps {
   onBack?: () => void;
 }
 
-export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPageProps) {  const {
+export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPageProps) {
+  const {
     chat,
     messages,
     loading,
@@ -41,15 +42,14 @@ export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPage
 
     const handleComplete = (data: any) => {
       console.log("[ChatPage] research:complete:", data);
-      // Clear after 3 seconds
-      setTimeout(() => setResearchJobId((prev) => 
+      setTimeout(() => setResearchJobId((prev) =>
         prev === data.jobId ? null : prev
       ), 3000);
     };
 
     const handleError = (data: any) => {
       console.log("[ChatPage] research:error:", data);
-      setTimeout(() => setResearchJobId((prev) => 
+      setTimeout(() => setResearchJobId((prev) =>
         prev === data.jobId ? null : prev
       ), 3000);
     };
@@ -80,7 +80,7 @@ export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPage
   if (!groupChatId) {
     return <EmptyState />;
   }
-console.log("socket:", socket, "researchJobId:", researchJobId);
+
   return (
     <div className="chat-page">
       <ChatHeader
@@ -91,7 +91,8 @@ console.log("socket:", socket, "researchJobId:", researchJobId);
         onBack={onBack}
         onCopyInvite={copyInviteLink}
       />
- <MessageList
+
+      <MessageList
         messages={messages}
         loading={loading}
         error={error}
@@ -100,28 +101,10 @@ console.log("socket:", socket, "researchJobId:", researchJobId);
         activeAgentName={activeAgentName}
         onSelectPlanOption={handleSelectPlanOption}
         onSendMessage={sendMessage}
-        // Pass the research panel as a slot
-        researchPanel={
-          researchJobId && socket ? (
-            <ResearchAgentPanel jobId={researchJobId} socket={socket} />
-          ) : null
-        }
+        researchJobId={researchJobId}
+        socket={socket}
       />
 
-
-      {/* Research panel — shows when active research job */}
-{researchJobId && socket && (
-  <div className="chat-messages" style={{ 
-    display: "flex", 
-    justifyContent: "flex-start",
-    padding: "8px 20px 16px",
-    paddingLeft: 64, // aligns with agent avatar column
-  }}>
-    <div style={{ pointerEvents: "auto" }}>
-      <ResearchAgentPanel jobId={researchJobId} socket={socket} />
-    </div>
-  </div>
-)}
       <ChatInput
         connected={connected}
         sending={sending}
