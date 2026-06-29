@@ -14,8 +14,7 @@ interface ChatPageProps {
   onBack?: () => void;
 }
 
-export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPageProps) {
-  const {
+export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPageProps) {  const {
     chat,
     messages,
     loading,
@@ -92,29 +91,32 @@ console.log("socket:", socket, "researchJobId:", researchJobId);
         onBack={onBack}
         onCopyInvite={copyInviteLink}
       />
+ <MessageList
+        messages={messages}
+        loading={loading}
+        error={error}
+        currentUserId={currentUserId}
+        agentThinking={agentThinking}
+        activeAgentName={activeAgentName}
+        onSelectPlanOption={handleSelectPlanOption}
+        onSendMessage={sendMessage}
+        // Pass the research panel as a slot
+        researchPanel={
+          researchJobId && socket ? (
+            <ResearchAgentPanel jobId={researchJobId} socket={socket} />
+          ) : null
+        }
+      />
 
-     <MessageList
-  messages={messages}
-  loading={loading}
-  error={error}
-  currentUserId={currentUserId}
-  agentThinking={agentThinking || !!researchJobId}  // ← add this
-  activeAgentName={activeAgentName}
-  onSelectPlanOption={handleSelectPlanOption}
-  onSendMessage={sendMessage}
-/>
 
       {/* Research panel — shows when active research job */}
-   {researchJobId && socket && (
-  <div
-    style={{
-      position: "absolute",
-      bottom: 80,
-      left: 16,
-      zIndex: 50,
-      pointerEvents: "none",
-    }}
-  >
+{researchJobId && socket && (
+  <div className="chat-messages" style={{ 
+    display: "flex", 
+    justifyContent: "flex-start",
+    padding: "8px 20px 16px",
+    paddingLeft: 64, // aligns with agent avatar column
+  }}>
     <div style={{ pointerEvents: "auto" }}>
       <ResearchAgentPanel jobId={researchJobId} socket={socket} />
     </div>

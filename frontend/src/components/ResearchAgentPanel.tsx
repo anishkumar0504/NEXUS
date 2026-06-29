@@ -372,13 +372,15 @@ export function ResearchAgentPanel({ jobId, socket }: ResearchAgentPanelProps) {
         overflow: "hidden",
         boxShadow: "0 0 0 1px rgba(99,102,241,0.06), 0 20px 50px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3)",
         backdropFilter: "blur(20px)",
-        maxWidth: 420,
-        minWidth: 360,
+        // maxWidth: 420,
+        // minWidth: 360,
       }}
     >
       {/* Top gradient glow line */}
       <div
         style={{
+             width: "100%",
+  maxWidth: 520,
           height: 1,
           background: "linear-gradient(90deg, transparent, var(--accent-glow), transparent)",
           opacity: isComplete ? 0 : 0.6,

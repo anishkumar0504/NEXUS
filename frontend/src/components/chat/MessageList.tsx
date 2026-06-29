@@ -14,6 +14,7 @@ interface MessageListProps {
   activeAgentName?: string;
   onSelectPlanOption: (option: string) => void;
   onSendMessage: (content: string) => void;
+  researchPanel?: React.ReactNode;
 }
 
 function shouldShowAvatar(messages: GroupMessage[], idx: number): boolean {
