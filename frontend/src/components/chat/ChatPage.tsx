@@ -105,12 +105,21 @@ console.log("socket:", socket, "researchJobId:", researchJobId);
 />
 
       {/* Research panel — shows when active research job */}
-    {researchJobId && socket && (
-  <div className="px-4 py-2">
-    <ResearchAgentPanel jobId={researchJobId} socket={socket} />
+   {researchJobId && socket && (
+  <div
+    style={{
+      position: "absolute",
+      bottom: 80,
+      left: 16,
+      zIndex: 50,
+      pointerEvents: "none",
+    }}
+  >
+    <div style={{ pointerEvents: "auto" }}>
+      <ResearchAgentPanel jobId={researchJobId} socket={socket} />
+    </div>
   </div>
 )}
-
       <ChatInput
         connected={connected}
         sending={sending}

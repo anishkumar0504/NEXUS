@@ -1484,6 +1484,8 @@ textarea { font-family: var(--font); }
 
 /* ── Chat page shell ────────────────────────────────────────── */
 .chat-page {
+    position: relative;
+
   display: flex;
   flex-direction: column;
   height: 100vh;
