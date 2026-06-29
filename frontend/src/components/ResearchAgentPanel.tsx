@@ -186,14 +186,12 @@ export function ResearchAgentPanel({ jobId, socket }: ResearchAgentPanelProps) {
               {step && <ModelBadge entity={entity} />}
 
               {/* Spinner */}
-              {isActive && (
-                <motion.div
-                  className="w-3 h-3 border-2 rounded-full shrink-0"
-                  style={{ borderColor: config.color + "30", borderTopColor: config.color }}
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
-                />
-              )}
+             {isActive && (
+  <span className="relative flex h-2 w-2 shrink-0">
+    <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: config.color }} />
+    <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: config.color }} />
+  </span>
+)}
             </motion.div>
           );
         })}

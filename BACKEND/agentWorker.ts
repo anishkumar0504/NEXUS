@@ -5,7 +5,7 @@ import { AgentJobData } from "./queues/queues.js";
 import { runAgent, AGENT_NAMES, AgentName } from "./lib/agentDispatcher.js";
 import { prisma } from "./lib/prisma.js";
 import { getIO } from "./server/Socketbridge.js"; // ← your getIO function
-import { runResearch, ResearchCallbacks, ResearchResult } from "./lib/researchPipeline.js ";
+import { runResearch, ResearchCallbacks, ResearchResult } from "./lib/researchPipeline.js";
 
 function isValidAgentName(name: string): name is AgentName {
   return AGENT_NAMES.includes(name as AgentName);
@@ -14,7 +14,7 @@ function isValidAgentName(name: string): name is AgentName {
 export const agentWorker = new Worker<AgentJobData>(
   "agent-dispatch",
   async (job) => {
-    const { groupId, agentName, prompt, tempId, triggeringUserId, socketId } = job.data;
+    const { groupId, agentName, prompt, tempId, triggeringUserId } = job.data;
 
     if (!isValidAgentName(agentName)) {
       throw new Error(`Invalid agent name: ${agentName}. Must be one of: ${AGENT_NAMES.join(", ")}`);
@@ -25,31 +25,27 @@ export const agentWorker = new Worker<AgentJobData>(
     let sources: { image?: string } | null = null;
 
     try {
-      // ── RESEARCH AGENT: Stream steps via Socket.IO ───────────────────
       if (agentName === "research") {
-        const io = getIO(); // ← get Socket.IO instance
+        const io = getIO();
         
         const callbacks: ResearchCallbacks = {
           onStep: (step) => {
-            const eventData = { jobId: job.id, ...step };
-            if (socketId) {
-              io.to(socketId).emit("research:step", eventData);
-            }
-            io.to(`group:${groupId}`).emit("research:step", eventData);
+            io.to(`group:${groupId}`).emit("research:step", {
+              jobId: job.id,
+              ...step,
+            });
           },
           onComplete: (result) => {
-            const eventData = { jobId: job.id, result };
-            if (socketId) {
-              io.to(socketId).emit("research:complete", eventData);
-            }
-            io.to(`group:${groupId}`).emit("research:complete", eventData);
+            io.to(`group:${groupId}`).emit("research:complete", {
+              jobId: job.id,
+              result,
+            });
           },
           onError: (error) => {
-            const eventData = { jobId: job.id, error };
-            if (socketId) {
-              io.to(socketId).emit("research:error", eventData);
-            }
-            io.to(`group:${groupId}`).emit("research:error", eventData);
+            io.to(`group:${groupId}`).emit("research:error", {
+              jobId: job.id,
+              error,
+            });
           },
         };
 
@@ -61,7 +57,6 @@ export const agentWorker = new Worker<AgentJobData>(
         agentId = agent?.id;
 
       } else {
-        // ── OTHER AGENTS: Original flow ────────────────────────────────
         const result = await runAgent(agentName, groupId, prompt, triggeringUserId);
         content = result.content;
         agentId = result.agentId;

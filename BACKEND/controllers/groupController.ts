@@ -145,6 +145,7 @@ export async function postMessage(req: Request, res: Response) {
   if (!member) return res.status(403).json({ error: "Not a member of this group" });
 
   const tempId = optionalString(req.body, "tempId") ?? randomUUID();
+  const socketId = optionalString(req.body, "socketId"); // ← ADD THIS
 
   await messageQueue.add("ingest-message", {
     groupId,
@@ -152,6 +153,7 @@ export async function postMessage(req: Request, res: Response) {
     senderType: "USER",
     userId,
     tempId,
+    socketId, // ← ADD THIS
   });
 
   res.status(202).json({ status: "queued", tempId });
