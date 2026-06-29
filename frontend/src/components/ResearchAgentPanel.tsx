@@ -199,6 +199,7 @@ function SimpleIcon({
     <svg
       width={size}
       height={size}
+      style={{ width: size, height: size, flexShrink: 0 }}
       viewBox="0 0 24 24"
       fill={color}
       xmlns="http://www.w3.org/2000/svg"
@@ -235,7 +236,7 @@ function LLMBadge({ entity }: { entity: string }) {
 
 function Spinner() {
   return (
-    <div className="w-3.5 h-3.5 rounded-full border-2 border-gray-200 dark:border-gray-700 border-t-blue-500 animate-spin flex-shrink-0" />
+    <div style={{ width: 13, height: 13, flexShrink: 0 }} className="rounded-full border-2 border-gray-200 dark:border-gray-700 border-t-blue-500 animate-spin" />
   );
 }
 
@@ -293,7 +294,7 @@ export function ResearchAgentPanel({ jobId, socket }: ResearchAgentPanelProps) {
       {/* Header */}
       <div className="flex items-center gap-2.5 px-3.5 py-2.5 border-b border-gray-100 dark:border-gray-800">
         <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950 flex items-center justify-center flex-shrink-0">
-          <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg style={{ width: 16, height: 16, flexShrink: 0 }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} color="#3b82f6">
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
           </svg>
         </div>
@@ -344,7 +345,7 @@ export function ResearchAgentPanel({ jobId, socket }: ResearchAgentPanelProps) {
                     }`}
                   >
                     {isDone ? (
-                      <svg className="w-2.5 h-2.5" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <svg style={{ width: 10, height: 10, flexShrink: 0 }} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2}>
                         <polyline points="2,6 5,9 10,3" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     ) : (
