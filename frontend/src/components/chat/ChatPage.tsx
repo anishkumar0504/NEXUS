@@ -81,7 +81,7 @@ export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPage
   if (!groupChatId) {
     return <EmptyState />;
   }
-
+console.log("socket:", socket, "researchJobId:", researchJobId);
   return (
     <div className="chat-page">
       <ChatHeader
@@ -93,23 +93,23 @@ export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPage
         onCopyInvite={copyInviteLink}
       />
 
-      <MessageList
-        messages={messages}
-        loading={loading}
-        error={error}
-        currentUserId={currentUserId}
-        agentThinking={agentThinking}
-        activeAgentName={activeAgentName}
-        onSelectPlanOption={handleSelectPlanOption}
-        onSendMessage={sendMessage}
-      />
+     <MessageList
+  messages={messages}
+  loading={loading}
+  error={error}
+  currentUserId={currentUserId}
+  agentThinking={agentThinking || !!researchJobId}  // ← add this
+  activeAgentName={activeAgentName}
+  onSelectPlanOption={handleSelectPlanOption}
+  onSendMessage={sendMessage}
+/>
 
       {/* Research panel — shows when active research job */}
-      {researchJobId && socket && (
-        <div className="px-4 py-2">
-          <ResearchAgentPanel jobId={researchJobId} socket={socket} />
-        </div>
-      )}
+    {researchJobId && socket && (
+  <div className="px-4 py-2">
+    <ResearchAgentPanel jobId={researchJobId} socket={socket} />
+  </div>
+)}
 
       <ChatInput
         connected={connected}
