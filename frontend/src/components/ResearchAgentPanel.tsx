@@ -1,9 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  siTavily,
+  siGroq,
+  siDeepseek,
+  siMeta,
+  siGooglegemini,
+  siOpenai,
+  siMistral,
+  siAnthropic,
+} from "simple-icons";
 
-interface ResearchStep {
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface ResearchStep {
   step: number;
   status: "running" | "complete" | "error";
   tool?: string;
@@ -17,60 +29,201 @@ interface ResearchAgentPanelProps {
   socket: any;
 }
 
-const STEP_CONFIG: Record<number, { name: string; color: string }> = {
-  1: { name: "Search", color: "#3b82f6" },
-  2: { name: "Extract", color: "#f59e0b" },
-  3: { name: "Synthesize", color: "#8b5cf6" },
-  4: { name: "Follow-ups", color: "#ec4899" },
-  5: { name: "Visualize", color: "#10b981" },
+// ─── Step config ──────────────────────────────────────────────────────────────
+
+const STEP_CONFIG: Record<
+  number,
+  { name: string; running: string; done: string }
+> = {
+  1: {
+    name: "Search",
+    running: "Querying the web for relevant sources…",
+    done: "Sources collected and ranked",
+  },
+  2: {
+    name: "Extract",
+    running: "Reading and chunking page content…",
+    done: "Content extracted and tokenised",
+  },
+  3: {
+    name: "Synthesize",
+    running: "Reasoning across sources…",
+    done: "Draft answer synthesised",
+  },
+  4: {
+    name: "Follow-ups",
+    running: "Generating related questions…",
+    done: "Follow-up questions ready",
+  },
+  5: {
+    name: "Visualize",
+    running: "Formatting the final response…",
+    done: "Response formatted and ready",
+  },
 };
 
-// Simple text-based badges — clean like your reference
-const MODEL_BADGES: Record<string, { name: string; color: string }> = {
-  "tavily": { name: "Tavily", color: "#3b82f6" },
-  "duckduckgo": { name: "DuckDuckGo", color: "#de5833" },
-  "openrouter": { name: "OpenRouter", color: "#6366f1" },
-  "openrouter/free": { name: "OpenRouter", color: "#6366f1" },
-  "meta-llama/llama-4-scout": { name: "Llama 4", color: "#0ea5e9" },
-  "meta-llama/llama-4-maverick": { name: "Llama 4", color: "#0284c7" },
-  "llama-3.1-8b-instant": { name: "Llama 3.1", color: "#0ea5e9" },
-  "llama-3.3-70b-versatile": { name: "Llama 3.3", color: "#0369a1" },
-  "deepseek/deepseek-chat-v3-0324": { name: "DeepSeek", color: "#4f46e5" },
-  "deepseek/deepseek-r1": { name: "DeepSeek R1", color: "#3730a3" },
-  "google/gemma-3-27b-it": { name: "Gemma", color: "#4285f4" },
-  "nvidia/nemotron-3-super": { name: "Nemotron", color: "#76b900" },
-  "groq": { name: "Groq", color: "#f97316" },
-  "mistralai/mistral-small-3.1-24b-instruct": { name: "Mistral", color: "#f97316" },
-  "pollinations": { name: "Pollinations", color: "#10b981" },
-  "x-ai/grok-3-mini-beta": { name: "Grok", color: "#000000" },
-  "openai/gpt-oss-20b": { name: "GPT-OSS", color: "#10a37f" },
-};
+// ─── LLM registry (simple-icons + fallback colour) ────────────────────────────
 
-const FALLBACK_BADGE = { name: "AI", color: "#6366f1" };
-
-function getBadgeInfo(entity: string) {
-  return MODEL_BADGES[entity] || FALLBACK_BADGE;
+interface LLMInfo {
+  name: string;
+  icon: { path: string; hex: string } | null;
+  color: string;
 }
 
-// Simple pill badge — like your reference image
-function ModelBadge({ entity }: { entity: string }) {
-  const badge = getBadgeInfo(entity);
+const LLM_REGISTRY: Record<string, LLMInfo> = {
+  tavily: {
+    name: "Tavily",
+    icon: siTavily,
+    color: `#${siTavily.hex}`,
+  },
+  groq: {
+    name: "Groq",
+    icon: siGroq,
+    color: `#${siGroq.hex}`,
+  },
+  deepseek: {
+    name: "DeepSeek",
+    icon: siDeepseek,
+    color: `#${siDeepseek.hex}`,
+  },
+  "deepseek/deepseek-chat-v3-0324": {
+    name: "DeepSeek",
+    icon: siDeepseek,
+    color: `#${siDeepseek.hex}`,
+  },
+  "deepseek/deepseek-r1": {
+    name: "DeepSeek R1",
+    icon: siDeepseek,
+    color: `#${siDeepseek.hex}`,
+  },
+  meta: {
+    name: "Llama",
+    icon: siMeta,
+    color: `#${siMeta.hex}`,
+  },
+  "meta-llama/llama-4-scout": {
+    name: "Llama 4 Scout",
+    icon: siMeta,
+    color: `#${siMeta.hex}`,
+  },
+  "meta-llama/llama-4-maverick": {
+    name: "Llama 4 Maverick",
+    icon: siMeta,
+    color: `#${siMeta.hex}`,
+  },
+  googlegemini: {
+    name: "Gemini",
+    icon: siGooglegemini,
+    color: `#${siGooglegemini.hex}`,
+  },
+  "google/gemma-3-27b-it": {
+    name: "Gemma",
+    icon: siGooglegemini,
+    color: `#${siGooglegemini.hex}`,
+  },
+  openai: {
+    name: "OpenAI",
+    icon: siOpenai,
+    color: `#${siOpenai.hex}`,
+  },
+  "openai/gpt-oss-20b": {
+    name: "GPT-OSS",
+    icon: siOpenai,
+    color: `#${siOpenai.hex}`,
+  },
+  mistral: {
+    name: "Mistral",
+    icon: siMistral,
+    color: `#${siMistral.hex}`,
+  },
+  "mistralai/mistral-small-3.1-24b-instruct": {
+    name: "Mistral",
+    icon: siMistral,
+    color: `#${siMistral.hex}`,
+  },
+  anthropic: {
+    name: "Claude",
+    icon: siAnthropic,
+    color: `#${siAnthropic.hex}`,
+  },
+  openrouter: {
+    name: "OpenRouter",
+    icon: null,
+    color: "#6366f1",
+  },
+  pollinations: {
+    name: "Pollinations",
+    icon: null,
+    color: "#10b981",
+  },
+};
 
+function getLLM(entity: string): LLMInfo {
   return (
-    <motion.span
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium"
-      style={{
-        backgroundColor: badge.color + "18",
-        color: badge.color,
-        border: `1px solid ${badge.color}30`,
-      }}
-    >
-      {badge.name}
-    </motion.span>
+    LLM_REGISTRY[entity] ?? {
+      name: entity,
+      icon: null,
+      color: "#6b7280",
+    }
   );
 }
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function SimpleIcon({
+  path,
+  color,
+  size = 13,
+}: {
+  path: string;
+  color: string;
+  size?: number;
+}) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill={color}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d={path} />
+    </svg>
+  );
+}
+
+function LLMBadge({ entity }: { entity: string }) {
+  const llm = getLLM(entity);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.85 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+      className="flex items-center gap-1.5 px-2 py-1 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+    >
+      {llm.icon ? (
+        <SimpleIcon path={llm.icon.path} color={llm.color} size={12} />
+      ) : (
+        <span
+          className="w-3 h-3 rounded-sm flex-shrink-0"
+          style={{ background: llm.color }}
+        />
+      )}
+      <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 leading-none">
+        {llm.name}
+      </span>
+    </motion.div>
+  );
+}
+
+function Spinner() {
+  return (
+    <div className="w-3.5 h-3.5 rounded-full border-2 border-gray-200 dark:border-gray-700 border-t-blue-500 animate-spin flex-shrink-0" />
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 export function ResearchAgentPanel({ jobId, socket }: ResearchAgentPanelProps) {
   const [steps, setSteps] = useState<ResearchStep[]>([]);
@@ -84,18 +237,16 @@ export function ResearchAgentPanel({ jobId, socket }: ResearchAgentPanelProps) {
       if (data.jobId !== jobId) return;
 
       setSteps((prev) => {
-        const existing = prev.findIndex((s) => s.step === data.step);
-        if (existing >= 0) {
+        const idx = prev.findIndex((s) => s.step === data.step);
+        if (idx >= 0) {
           const updated = [...prev];
-          updated[existing] = data;
+          updated[idx] = data;
           return updated;
         }
         return [...prev, data];
       });
 
-      if (data.status === "running") {
-        setCurrentStep(data.step);
-      }
+      if (data.status === "running") setCurrentStep(data.step);
     };
 
     const handleComplete = (data: { jobId: string }) => {
@@ -105,10 +256,8 @@ export function ResearchAgentPanel({ jobId, socket }: ResearchAgentPanelProps) {
       }
     };
 
-    const handleError = (data: { jobId: string; error: string }) => {
-      if (data.jobId === jobId) {
-        setIsComplete(true);
-      }
+    const handleError = (data: { jobId: string }) => {
+      if (data.jobId === jobId) setIsComplete(true);
     };
 
     socket.on("research:step", handleStep);
@@ -123,90 +272,135 @@ export function ResearchAgentPanel({ jobId, socket }: ResearchAgentPanelProps) {
   }, [jobId, socket]);
 
   return (
-    <div className="bg-gray-900/95 backdrop-blur rounded-xl p-3 mb-3 border border-gray-700/50 shadow-lg max-w-xs">
-      {/* Header — static, no rotation */}
-      <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-700/50">
-        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-          <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+    <div className="w-72 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden shadow-sm">
+
+      {/* Header */}
+      <div className="flex items-center gap-2.5 px-3.5 py-2.5 border-b border-gray-100 dark:border-gray-800">
+        <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950 flex items-center justify-center flex-shrink-0">
+          <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
           </svg>
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-white font-semibold text-xs">Research Agent</h3>
-          <p className="text-gray-400 text-[10px]">
-            {isComplete ? "Complete" : `Step ${currentStep} of 5`}
+          <p className="text-xs font-semibold text-gray-800 dark:text-gray-100 leading-tight">
+            Research agent
+          </p>
+          <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight mt-0.5">
+            {isComplete
+              ? "Complete"
+              : currentStep > 0
+              ? `Step ${currentStep} of 5 — ${STEP_CONFIG[currentStep]?.name}`
+              : "Initialising…"}
           </p>
         </div>
       </div>
 
-      {/* Steps — compact list */}
-      <div className="space-y-1">
-        {[1, 2, 3, 4, 5].map((stepNum) => {
-          const step = steps.find((s) => s.step === stepNum);
-          const config = STEP_CONFIG[stepNum];
-          const isActive = currentStep === stepNum && !isComplete;
+      {/* Steps */}
+      <div className="py-1">
+        {[1, 2, 3, 4, 5].map((num, i) => {
+          const step = steps.find((s) => s.step === num);
+          const cfg = STEP_CONFIG[num];
           const isDone = step?.status === "complete";
-          const isPending = !step && !isActive;
+          const isActive = step?.status === "running";
+          const isPending = !step;
+          const isLast = i === 4;
 
-          const entity = step?.tool || step?.model || step?.provider || "openrouter";
-
-          if (isPending) {
-            return (
-              <div key={stepNum} className="flex items-center gap-2 py-1 opacity-30">
-                <div className="w-4 h-4 rounded-sm bg-gray-800 flex items-center justify-center text-[9px] text-gray-500">
-                  {stepNum}
-                </div>
-                <span className="text-gray-500 text-[11px]">{config.name}</span>
-              </div>
-            );
-          }
+          const entity =
+            step?.tool ?? step?.model ?? step?.provider ?? "";
 
           return (
-            <motion.div
-              key={stepNum}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className={`flex items-center gap-2 py-1 px-1.5 rounded ${isActive ? "bg-gray-800/50" : ""}`}
-            >
-              {/* Status dot/number */}
-              <div
-                className="w-4 h-4 rounded-sm flex items-center justify-center text-[9px] font-bold shrink-0"
-                style={{
-                  backgroundColor: isDone ? "#10b98120" : isActive ? config.color + "20" : "#374151",
-                  color: isDone ? "#10b981" : isActive ? config.color : "#9ca3af",
-                }}
+            <div key={num}>
+              <motion.div
+                initial={false}
+                animate={{ opacity: isPending ? 0.3 : 1 }}
+                transition={{ duration: 0.2 }}
+                className="flex items-start gap-2.5 px-3.5 py-2"
               >
-                {isDone ? "✓" : stepNum}
-              </div>
+                {/* Left: number + connector */}
+                <div className="flex flex-col items-center flex-shrink-0 mt-0.5">
+                  <div
+                    className={`w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-semibold transition-colors duration-200 ${
+                      isDone
+                        ? "bg-green-50 dark:bg-green-950 text-green-600 dark:text-green-400"
+                        : isActive
+                        ? "bg-blue-50 dark:bg-blue-950 text-blue-500"
+                        : "bg-gray-100 dark:bg-gray-800 text-gray-400"
+                    }`}
+                  >
+                    {isDone ? (
+                      <svg className="w-2.5 h-2.5" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2}>
+                        <polyline points="2,6 5,9 10,3" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    ) : (
+                      num
+                    )}
+                  </div>
+                  {!isLast && (
+                    <div
+                      className={`w-px mt-1 transition-all duration-500 ${
+                        isDone
+                          ? "h-full min-h-[14px] bg-green-200 dark:bg-green-900"
+                          : "h-full min-h-[14px] bg-gray-100 dark:bg-gray-800"
+                      }`}
+                    />
+                  )}
+                </div>
 
-              {/* Name */}
-              <span className="text-gray-300 text-[11px] flex-1">{config.name}</span>
+                {/* Right: text + badge */}
+                <div className="flex-1 min-w-0 flex items-start justify-between gap-2 pb-1">
+                  <div className="min-w-0">
+                    <p
+                      className={`text-xs font-medium leading-tight transition-colors duration-200 ${
+                        isDone
+                          ? "text-gray-400 dark:text-gray-600"
+                          : isActive
+                          ? "text-gray-900 dark:text-gray-100"
+                          : "text-gray-400 dark:text-gray-600"
+                      }`}
+                    >
+                      {cfg.name}
+                    </p>
+                    <AnimatePresence mode="wait">
+                      {(isActive || isDone) && (
+                        <motion.p
+                          key={step?.status}
+                          initial={{ opacity: 0, y: 3 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 leading-snug"
+                        >
+                          {isActive ? cfg.running : cfg.done}
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
+                  </div>
 
-              {/* Model badge — small pill */}
-              {step && <ModelBadge entity={entity} />}
-
-              {/* Spinner */}
-             {isActive && (
-  <span className="relative flex h-2 w-2 shrink-0">
-    <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: config.color }} />
-    <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: config.color }} />
-  </span>
-)}
-            </motion.div>
+                  <div className="flex items-center gap-1.5 flex-shrink-0 mt-0.5">
+                    <AnimatePresence>
+                      {isDone && entity && <LLMBadge entity={entity} />}
+                    </AnimatePresence>
+                    {isActive && <Spinner />}
+                  </div>
+                </div>
+              </motion.div>
+            </div>
           );
         })}
       </div>
 
-      {/* Completion */}
+      {/* Done bar */}
       <AnimatePresence>
         {isComplete && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="mt-2 pt-2 border-t border-gray-700/50 flex items-center gap-1.5"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            className="border-t border-gray-100 dark:border-gray-800 bg-green-50 dark:bg-green-950 px-3.5 py-2 flex items-center gap-2"
           >
-            <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
-            <span className="text-green-400 text-[10px]">Done</span>
+            <div className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" />
+            <span className="text-[10px] font-medium text-green-600 dark:text-green-400">
+              Research complete
+            </span>
           </motion.div>
         )}
       </AnimatePresence>
