@@ -202,7 +202,7 @@ function SimpleIcon({
       viewBox="0 0 24 24"
       fill={color}
       xmlns="http://www.w3.org/2000/svg"
-      style={{ flexShrink: 0, display: "block" }}
+      className="block shrink-0"
     >
       <path d={path} />
     </svg>
@@ -218,41 +218,20 @@ function LLMBadge({ entity }: { entity: string }) {
       animate={{ opacity: 1, scale: 1, x: 0 }}
       exit={{ opacity: 0, scale: 0.85, x: 4 }}
       transition={{ type: "spring", stiffness: 400, damping: 24 }}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 6,
-        padding: "4px 10px",
-        borderRadius: 20,
-        border: "1px solid var(--border-2)",
-        background: "var(--bg-3)",
-        backdropFilter: "blur(8px)",
-      }}
+      className="flex items-center gap-1.5 px-2.5 py-1 rounded-[20px] border border-[var(--border-2)] bg-[var(--bg-3)] backdrop-blur-sm"
     >
       {llm.icon ? (
         <SimpleIcon path={llm.icon.path} color={llm.color} size={12} />
       ) : (
         <span
+          className="w-2.5 h-2.5 rounded-full shrink-0"
           style={{
-            width: 10,
-            height: 10,
-            borderRadius: "50%",
             background: llm.color,
-            flexShrink: 0,
             boxShadow: `0 0 6px ${llm.color}40`,
           }}
         />
       )}
-      <span
-        style={{
-          fontSize: 11,
-          fontWeight: 500,
-          color: "var(--text-2)",
-          fontFamily: "var(--font)",
-          letterSpacing: "0.01em",
-          lineHeight: 1,
-        }}
-      >
+      <span className="text-[11px] font-medium text-[var(--text-2)] font-[var(--font)] tracking-[0.01em] leading-none">
         {llm.name}
       </span>
     </motion.div>
@@ -262,42 +241,26 @@ function LLMBadge({ entity }: { entity: string }) {
 function Spinner() {
   return (
     <div
+      className="w-4 h-4 shrink-0 rounded-full animate-spin"
       style={{
-        width: 16,
-        height: 16,
-        flexShrink: 0,
-        borderRadius: "50%",
         border: "2px solid var(--border-2)",
         borderTopColor: "var(--accent)",
       }}
-      className="animate-spin"
     />
   );
 }
 
 function LivePulse() {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+    <div className="flex items-center gap-1.5">
       <span
+        className="w-[7px] h-[7px] rounded-full inline-block animate-pulse"
         style={{
-          width: 7,
-          height: 7,
-          borderRadius: "50%",
           background: "var(--accent)",
           boxShadow: "0 0 10px var(--accent-glow), 0 0 20px rgba(99,102,241,0.2)",
-          display: "inline-block",
         }}
-        className="animate-pulse"
       />
-      <span
-        style={{
-          fontSize: 11,
-          fontWeight: 500,
-          color: "var(--accent-2)",
-          fontFamily: "var(--font)",
-          letterSpacing: "0.02em",
-        }}
-      >
+      <span className="text-[11px] font-medium text-[var(--accent-2)] font-[var(--font)] tracking-[0.02em]">
         Live
       </span>
     </div>
@@ -365,43 +328,29 @@ export function ResearchAgentPanel({ jobId, socket }: ResearchAgentPanelProps) {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 8, scale: 0.98 }}
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      className="rounded-2xl overflow-hidden backdrop-blur-xl border border-[var(--border)]"
       style={{
         background: "linear-gradient(180deg, rgba(17,17,20,0.95) 0%, rgba(10,10,11,0.98) 100%)",
-        border: "1px solid var(--border)",
-        borderRadius: 16,
-        overflow: "hidden",
         boxShadow: "0 0 0 1px rgba(99,102,241,0.06), 0 20px 50px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3)",
-        backdropFilter: "blur(20px)",
-        // maxWidth: 420,
-        // minWidth: 360,
       }}
     >
       {/* Top gradient glow line */}
       <div
+        className="w-full h-px"
         style={{
-             width: "100%",
-  maxWidth: 520,
-          height: 1,
+          maxWidth: 520,
           background: "linear-gradient(90deg, transparent, var(--accent-glow), transparent)",
           opacity: isComplete ? 0 : 0.6,
         }}
       />
 
       {/* Progress bar */}
-      <div
-        style={{
-          height: 3,
-          background: "var(--bg-3)",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
+      <div className="h-[3px] bg-[var(--bg-3)] relative overflow-hidden">
         <motion.div
+          className="h-full rounded-r-[3px]"
           style={{
-            height: "100%",
             background: "linear-gradient(90deg, var(--accent), var(--accent-2), var(--accent))",
             backgroundSize: "200% 100%",
-            borderRadius: "0 3px 3px 0",
             boxShadow: "0 0 12px rgba(99,102,241,0.3)",
           }}
           initial={{ width: 0 }}
@@ -411,14 +360,9 @@ export function ResearchAgentPanel({ jobId, socket }: ResearchAgentPanelProps) {
         {/* Shimmer effect on progress bar */}
         {!isComplete && (
           <motion.div
+            className="absolute inset-0 w-[30%]"
             style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
               background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)",
-              width: "30%",
             }}
             animate={{ x: ["-100%", "400%"] }}
             transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
@@ -427,29 +371,13 @@ export function ResearchAgentPanel({ jobId, socket }: ResearchAgentPanelProps) {
       </div>
 
       {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-          padding: "18px 20px 14px",
-          borderBottom: "1px solid var(--border)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <div className="flex items-center justify-between gap-3 px-5 pt-[18px] pb-3.5 border-b border-[var(--border)]">
+        <div className="flex items-center gap-3">
           <div
+            className="w-[38px] h-[38px] rounded-xl flex items-center justify-center shrink-0 relative"
             style={{
-              width: 38,
-              height: 38,
-              borderRadius: 12,
               background: "linear-gradient(135deg, var(--accent-glow), rgba(99,102,241,0.08))",
               border: "1px solid rgba(99,102,241,0.15)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-              position: "relative",
             }}
           >
             <svg
@@ -468,42 +396,21 @@ export function ResearchAgentPanel({ jobId, socket }: ResearchAgentPanelProps) {
             {/* Orbiting dot */}
             {!isComplete && (
               <motion.div
+                className="absolute w-1 h-1 rounded-full"
                 style={{
-                  position: "absolute",
-                  width: 4,
-                  height: 4,
-                  borderRadius: "50%",
                   background: "var(--accent-2)",
                   boxShadow: "0 0 6px var(--accent)",
                 }}
                 animate={{ rotate: 360 }}
                 transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                // Position on the border
               />
             )}
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p
-              style={{
-                fontSize: 15,
-                fontWeight: 600,
-                color: "var(--text)",
-                letterSpacing: "-0.01em",
-                lineHeight: 1.3,
-                fontFamily: "var(--font)",
-              }}
-            >
+          <div className="flex-1 min-w-0">
+            <p className="text-[15px] font-semibold text-[var(--text)] tracking-[-0.01em] leading-[1.3] font-[var(--font)]">
               Research Agent
             </p>
-            <p
-              style={{
-                fontSize: 12,
-                color: "var(--text-3)",
-                lineHeight: 1.5,
-                marginTop: 2,
-                fontFamily: "var(--font)",
-              }}
-            >
+            <p className="text-xs text-[var(--text-3)] leading-relaxed mt-0.5 font-[var(--font)]">
               {isComplete
                 ? "Research complete"
                 : currentStep > 0
@@ -516,7 +423,7 @@ export function ResearchAgentPanel({ jobId, socket }: ResearchAgentPanelProps) {
       </div>
 
       {/* Steps */}
-      <div style={{ padding: "12px 0" }}>
+      <div className="py-3">
         {[1, 2, 3, 4, 5].map((num, i) => {
           const step = steps.find((s) => s.step === num);
           const cfg = STEP_CONFIG[num];
@@ -536,25 +443,10 @@ export function ResearchAgentPanel({ jobId, socket }: ResearchAgentPanelProps) {
                   background: isActive ? "rgba(99,102,241,0.03)" : "transparent",
                 }}
                 transition={{ duration: 0.3 }}
-                style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: 14,
-                  padding: "10px 20px",
-                  borderRadius: isActive ? 8 : 0,
-                  margin: isActive ? "0 8px" : "0",
-                }}
+                className={`flex items-start gap-3.5 px-5 py-2.5 ${isActive ? "mx-2 rounded-lg" : ""}`}
               >
                 {/* Left: step indicator + connector */}
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    flexShrink: 0,
-                    marginTop: 1,
-                  }}
-                >
+                <div className="flex flex-col items-center shrink-0 mt-px">
                   <motion.div
                     animate={
                       isActive
@@ -572,17 +464,9 @@ export function ResearchAgentPanel({ jobId, socket }: ResearchAgentPanelProps) {
                       repeat: Infinity,
                       ease: "easeInOut",
                     }}
+                    className="w-[26px] h-[26px] rounded-lg flex items-center justify-center text-[11px] font-bold font-[var(--mono)] transition-all duration-[400ms]"
                     style={{
-                      width: 26,
-                      height: 26,
-                      borderRadius: 8,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 11,
-                      fontWeight: 700,
-                      fontFamily: "var(--mono)",
-                      transition: "all 0.4s cubic-bezier(0.22, 1, 0.36, 1)",
+                      transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
                       ...(isDone
                         ? {
                             background: "rgba(34,197,94,0.1)",
@@ -621,21 +505,16 @@ export function ResearchAgentPanel({ jobId, socket }: ResearchAgentPanelProps) {
                   </motion.div>
                   {!isLast && (
                     <div
+                      className="w-0.5 mt-1 transition-all duration-500 ease-[ease]"
                       style={{
-                        width: 2,
-                        marginTop: 4,
-                        borderRadius: 1,
-                        transition: "all 0.5s ease",
+                        height: 22,
+                        minHeight: 22,
                         ...(isDone
                           ? {
-                              height: 22,
-                              minHeight: 22,
                               background:
                                 "linear-gradient(180deg, rgba(34,197,94,0.35) 0%, rgba(34,197,94,0.08) 100%)",
                             }
                           : {
-                              height: 22,
-                              minHeight: 22,
                               background: "var(--border)",
                             }),
                       }}
@@ -644,31 +523,12 @@ export function ResearchAgentPanel({ jobId, socket }: ResearchAgentPanelProps) {
                 </div>
 
                 {/* Right: text + badge */}
-                <div
-                  style={{
-                    flex: 1,
-                    minWidth: 0,
-                    display: "flex",
-                    alignItems: "flex-start",
-                    justifyContent: "space-between",
-                    gap: 12,
-                    paddingTop: 3,
-                  }}
-                >
-                  <div style={{ minWidth: 0 }}>
+                <div className="flex-1 min-w-0 flex items-start justify-between gap-3 pt-[3px]">
+                  <div className="min-w-0">
                     <p
-                      style={{
-                        fontSize: 14,
-                        fontWeight: isActive ? 600 : 500,
-                        lineHeight: 1.4,
-                        transition: "all 0.3s ease",
-                        fontFamily: "var(--font)",
-                        ...(isDone
-                          ? { color: "var(--text-3)" }
-                          : isActive
-                          ? { color: "var(--text)" }
-                          : { color: "var(--text-3)" }),
-                      }}
+                      className={`text-sm leading-[1.4] transition-all duration-300 font-[var(--font)] ${
+                        isActive ? "font-semibold text-[var(--text)]" : "font-medium text-[var(--text-3)]"
+                      }`}
                     >
                       {cfg.name}
                     </p>
@@ -680,13 +540,7 @@ export function ResearchAgentPanel({ jobId, socket }: ResearchAgentPanelProps) {
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -3 }}
                           transition={{ duration: 0.25 }}
-                          style={{
-                            fontSize: 12,
-                            color: "var(--text-2)",
-                            marginTop: 4,
-                            lineHeight: 1.5,
-                            fontFamily: "var(--font)",
-                          }}
+                          className="text-xs text-[var(--text-2)] mt-1 leading-relaxed font-[var(--font)]"
                         >
                           {isActive ? cfg.running : cfg.done}
                         </motion.p>
@@ -694,15 +548,7 @@ export function ResearchAgentPanel({ jobId, socket }: ResearchAgentPanelProps) {
                     </AnimatePresence>
                   </div>
 
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      flexShrink: 0,
-                      marginTop: 1,
-                    }}
-                  >
+                  <div className="flex items-center gap-2 shrink-0 mt-px">
                     <AnimatePresence>
                       {isDone && entity && <LLMBadge entity={entity} />}
                     </AnimatePresence>
@@ -723,43 +569,23 @@ export function ResearchAgentPanel({ jobId, socket }: ResearchAgentPanelProps) {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            className="flex items-center gap-2.5 px-5 py-3.5"
             style={{
               borderTop: "1px solid rgba(34,197,94,0.15)",
               background: "linear-gradient(180deg, rgba(34,197,94,0.06), rgba(34,197,94,0.02))",
-              padding: "14px 20px",
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
             }}
           >
             <div
+              className="w-2 h-2 rounded-full shrink-0"
               style={{
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
                 background: "var(--green)",
                 boxShadow: "0 0 10px rgba(34,197,94,0.4), 0 0 20px rgba(34,197,94,0.15)",
-                flexShrink: 0,
               }}
             />
-            <span
-              style={{
-                fontSize: 13,
-                fontWeight: 600,
-                color: "var(--green)",
-                fontFamily: "var(--font)",
-              }}
-            >
+            <span className="text-[13px] font-semibold text-[var(--green)] font-[var(--font)]">
               Research complete
             </span>
-            <span
-              style={{
-                fontSize: 12,
-                color: "var(--text-3)",
-                marginLeft: "auto",
-                fontFamily: "var(--font)",
-              }}
-            >
+            <span className="text-xs text-[var(--text-3)] ml-auto font-[var(--font)]">
               {steps.length} steps finished
             </span>
           </motion.div>
