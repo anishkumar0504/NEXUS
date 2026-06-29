@@ -1807,3 +1807,11 @@ textarea { font-family: var(--font); }
     padding-bottom: calc(14px + env(safe-area-inset-bottom));
   }
 }
+
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.animate-spin {
+  animation: spin 0.7s linear infinite;
+}
