@@ -69,13 +69,9 @@ export function ChatPage({ groupChatId, token, currentUserId, onBack }: ChatPage
     .filter((m) => m.senderType === "AGENT")
     .slice(-1)[0]?.agent?.name;
 
-  function handleSelectPlanOption(option: string) {
-    if (option === "__skip__") {
-      sendMessage("Proceed with your plan.");
-    } else {
-      sendMessage(`I choose: ${option}`);
-    }
-  }
+function handleSelectPlanOption(option: string) {
+  sendMessage(option);
+}
 
   if (!groupChatId) {
     return <EmptyState />;

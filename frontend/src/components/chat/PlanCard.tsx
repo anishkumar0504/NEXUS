@@ -465,8 +465,10 @@ export function PlanCard({
                   }}
                 />
                 <span className="text-[13px] sm:text-sm font-medium" style={{ color: agentConfig.color }}>
-                  {selected === "skip" ? "Proceeding with default plan..." : `Selected: ${selected}`}
-                </span>
+{selected === "skip" 
+  ? "Proceeding with default plan..." 
+  : `Selected: ${selected.replace(/^@\w+\s*/, "")}`
+}                </span>
               </motion.div>
             )}
           </AnimatePresence>
