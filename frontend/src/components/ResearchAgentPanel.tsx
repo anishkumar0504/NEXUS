@@ -12,10 +12,10 @@ import {
 } from "simple-icons";
 
 const FALLBACK_ICONS: Record<string, { hex: string }> = {
-  tavily:     { hex: "0070f3" },
-  groq:       { hex: "f97316" },
-  openai:     { hex: "412991" },
-  openrouter: { hex: "6366f1" },
+  tavily:      { hex: "0070f3" },
+  groq:        { hex: "f97316" },
+  openai:      { hex: "412991" },
+  openrouter:  { hex: "6366f1" },
   pollinations:{ hex: "10b981" },
 };
 
@@ -68,7 +68,7 @@ const STEP_CONFIG: Record<
   },
 };
 
-// ─── LLM registry (simple-icons + fallback colour) ────────────────────────────
+// ─── LLM registry ─────────────────────────────────────────────────────────────
 
 interface LLMInfo {
   name: string;
@@ -179,7 +179,7 @@ function getLLM(entity: string): LLMInfo {
     LLM_REGISTRY[entity] ?? {
       name: entity,
       icon: null,
-      color: "#6b7280",
+      color: "#606075",
     }
   );
 }
@@ -189,7 +189,7 @@ function getLLM(entity: string): LLMInfo {
 function SimpleIcon({
   path,
   color,
-  size = 13,
+  size = 12,
 }: {
   path: string;
   color: string;
@@ -199,10 +199,10 @@ function SimpleIcon({
     <svg
       width={size}
       height={size}
-      style={{ width: size, height: size, flexShrink: 0 }}
       viewBox="0 0 24 24"
       fill={color}
       xmlns="http://www.w3.org/2000/svg"
+      style={{ flexShrink: 0 }}
     >
       <path d={path} />
     </svg>
@@ -214,20 +214,43 @@ function LLMBadge({ entity }: { entity: string }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.85 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ type: "spring", stiffness: 300, damping: 20 }}
-      className="flex items-center gap-1.5 px-2 py-1 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+      initial={{ opacity: 0, scale: 0.8, y: 4 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.8 }}
+      transition={{ type: "spring", stiffness: 400, damping: 24 }}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 5,
+        padding: "3px 8px",
+        borderRadius: 6,
+        border: "1px solid var(--border)",
+        background: "var(--bg-3)",
+      }}
     >
       {llm.icon ? (
-        <SimpleIcon path={llm.icon.path} color={llm.color} size={12} />
+        <SimpleIcon path={llm.icon.path} color={llm.color} size={11} />
       ) : (
         <span
-          className="w-3 h-3 rounded-sm flex-shrink-0"
-          style={{ background: llm.color }}
+          style={{
+            width: 10,
+            height: 10,
+            borderRadius: 3,
+            background: llm.color,
+            flexShrink: 0,
+          }}
         />
       )}
-      <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 leading-none">
+      <span
+        style={{
+          fontSize: 10,
+          fontWeight: 500,
+          color: "var(--text-2)",
+          fontFamily: "var(--font)",
+          letterSpacing: "0.01em",
+          lineHeight: 1,
+        }}
+      >
         {llm.name}
       </span>
     </motion.div>
@@ -236,7 +259,33 @@ function LLMBadge({ entity }: { entity: string }) {
 
 function Spinner() {
   return (
-    <div style={{ width: 13, height: 13, flexShrink: 0 }} className="rounded-full border-2 border-gray-200 dark:border-gray-700 border-t-blue-500 animate-spin" />
+    <div
+      style={{
+        width: 14,
+        height: 14,
+        flexShrink: 0,
+        borderRadius: "50%",
+        border: "2px solid var(--border)",
+        borderTopColor: "var(--accent)",
+      }}
+      className="animate-spin"
+    />
+  );
+}
+
+function PulseDot() {
+  return (
+    <span
+      style={{
+        width: 6,
+        height: 6,
+        borderRadius: "50%",
+        background: "var(--accent)",
+        boxShadow: "0 0 8px var(--accent-glow)",
+        display: "inline-block",
+      }}
+      className="animate-pulse"
+    />
   );
 }
 
@@ -288,21 +337,106 @@ export function ResearchAgentPanel({ jobId, socket }: ResearchAgentPanelProps) {
     };
   }, [jobId, socket]);
 
+  const progressPercent = useMemo(() => {
+    const completed = steps.filter((s) => s.status === "complete").length;
+    return (completed / 5) * 100;
+  }, [steps]);
+
   return (
-    <div className="w-72 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden shadow-sm">
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 4 }}
+      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      style={{
+        background: "var(--bg-2)",
+        border: "1px solid var(--border)",
+        borderRadius: "var(--radius-lg)",
+        overflow: "hidden",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.02)",
+        maxWidth: 320,
+      }}
+    >
+      {/* Progress bar */}
+      <div
+        style={{
+          height: 2,
+          background: "var(--bg-3)",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        <motion.div
+          style={{
+            height: "100%",
+            background: "linear-gradient(90deg, var(--accent), var(--accent-2))",
+            borderRadius: "0 2px 2px 0",
+          }}
+          initial={{ width: 0 }}
+          animate={{ width: `${progressPercent}%` }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        />
+      </div>
 
       {/* Header */}
-      <div className="flex items-center gap-2.5 px-3.5 py-2.5 border-b border-gray-100 dark:border-gray-800">
-        <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950 flex items-center justify-center flex-shrink-0">
-          <svg style={{ width: 16, height: 16, flexShrink: 0 }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} color="#3b82f6">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "14px 16px 12px",
+          borderBottom: "1px solid var(--border)",
+        }}
+      >
+        <div
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 10,
+            background: "var(--accent-glow)",
+            border: "1px solid rgba(99,102,241,0.15)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          <svg
+            width={15}
+            height={15}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="var(--accent)"
+            strokeWidth={1.8}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx={11} cy={11} r={8} />
+            <path d="m21 21-4.35-4.35" />
           </svg>
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-gray-800 dark:text-gray-100 leading-tight">
-            Research agent
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p
+            style={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: "var(--text)",
+              letterSpacing: "-0.01em",
+              lineHeight: 1.3,
+              fontFamily: "var(--font)",
+            }}
+          >
+            Research Agent
           </p>
-          <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight mt-0.5">
+          <p
+            style={{
+              fontSize: 11,
+              color: "var(--text-3)",
+              lineHeight: 1.4,
+              marginTop: 1,
+              fontFamily: "var(--font)",
+            }}
+          >
             {isComplete
               ? "Complete"
               : currentStep > 0
@@ -310,10 +444,11 @@ export function ResearchAgentPanel({ jobId, socket }: ResearchAgentPanelProps) {
               : "Initialising…"}
           </p>
         </div>
+        {!isComplete && currentStep > 0 && <PulseDot />}
       </div>
 
       {/* Steps */}
-      <div className="py-1">
+      <div style={{ padding: "8px 0" }}>
         {[1, 2, 3, 4, 5].map((num, i) => {
           const step = steps.find((s) => s.step === num);
           const cfg = STEP_CONFIG[num];
@@ -322,58 +457,144 @@ export function ResearchAgentPanel({ jobId, socket }: ResearchAgentPanelProps) {
           const isPending = !step;
           const isLast = i === 4;
 
-          const entity =
-            step?.tool ?? step?.model ?? step?.provider ?? "";
+          const entity = step?.tool ?? step?.model ?? step?.provider ?? "";
 
           return (
             <div key={num}>
               <motion.div
                 initial={false}
-                animate={{ opacity: isPending ? 0.3 : 1 }}
-                transition={{ duration: 0.2 }}
-                className="flex items-start gap-2.5 px-3.5 py-2"
+                animate={{ opacity: isPending ? 0.35 : 1 }}
+                transition={{ duration: 0.25 }}
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 10,
+                  padding: "7px 16px",
+                }}
               >
-                {/* Left: number + connector */}
-                <div className="flex flex-col items-center flex-shrink-0 mt-0.5">
-                  <div
-                    className={`w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-semibold transition-colors duration-200 ${
-                      isDone
-                        ? "bg-green-50 dark:bg-green-950 text-green-600 dark:text-green-400"
+                {/* Left: step indicator + connector */}
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    flexShrink: 0,
+                    marginTop: 2,
+                  }}
+                >
+                  <motion.div
+                    animate={
+                      isActive
+                        ? {
+                            boxShadow: [
+                              "0 0 0 0px rgba(99,102,241,0)",
+                              "0 0 0 4px rgba(99,102,241,0.12)",
+                              "0 0 0 0px rgba(99,102,241,0)",
+                            ],
+                          }
+                        : {}
+                    }
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                    style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: 6,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 9,
+                      fontWeight: 700,
+                      fontFamily: "var(--mono)",
+                      transition: "all 0.3s ease",
+                      ...(isDone
+                        ? {
+                            background: "rgba(34,197,94,0.1)",
+                            color: "var(--green)",
+                            border: "1px solid rgba(34,197,94,0.2)",
+                          }
                         : isActive
-                        ? "bg-blue-50 dark:bg-blue-950 text-blue-500"
-                        : "bg-gray-100 dark:bg-gray-800 text-gray-400"
-                    }`}
+                        ? {
+                            background: "var(--accent-glow)",
+                            color: "var(--accent)",
+                            border: "1px solid rgba(99,102,241,0.25)",
+                          }
+                        : {
+                            background: "var(--bg-3)",
+                            color: "var(--text-3)",
+                            border: "1px solid var(--border)",
+                          }),
+                    }}
                   >
                     {isDone ? (
-                      <svg style={{ width: 10, height: 10, flexShrink: 0 }} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2}>
-                        <polyline points="2,6 5,9 10,3" strokeLinecap="round" strokeLinejoin="round" />
+                      <svg
+                        width={10}
+                        height={10}
+                        viewBox="0 0 12 12"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2.2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="2,6 5,9 10,3" />
                       </svg>
                     ) : (
                       num
                     )}
-                  </div>
+                  </motion.div>
                   {!isLast && (
                     <div
-                      className={`w-px mt-1 transition-all duration-500 ${
-                        isDone
-                          ? "h-full min-h-[14px] bg-green-200 dark:bg-green-900"
-                          : "h-full min-h-[14px] bg-gray-100 dark:bg-gray-800"
-                      }`}
+                      style={{
+                        width: 1,
+                        marginTop: 3,
+                        transition: "all 0.5s ease",
+                        ...(isDone
+                          ? {
+                              height: 16,
+                              minHeight: 16,
+                              background:
+                                "linear-gradient(180deg, rgba(34,197,94,0.3), rgba(34,197,94,0.08))",
+                            }
+                          : {
+                              height: 16,
+                              minHeight: 16,
+                              background: "var(--border)",
+                            }),
+                      }}
                     />
                   )}
                 </div>
 
                 {/* Right: text + badge */}
-                <div className="flex-1 min-w-0 flex items-start justify-between gap-2 pb-1">
-                  <div className="min-w-0">
+                <div
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    display: "flex",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                    gap: 8,
+                    paddingBottom: 2,
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
                     <p
-                      className={`text-xs font-medium leading-tight transition-colors duration-200 ${
-                        isDone
-                          ? "text-gray-400 dark:text-gray-600"
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 500,
+                        lineHeight: 1.4,
+                        transition: "color 0.3s ease",
+                        fontFamily: "var(--font)",
+                        ...(isDone
+                          ? { color: "var(--text-3)" }
                           : isActive
-                          ? "text-gray-900 dark:text-gray-100"
-                          : "text-gray-400 dark:text-gray-600"
-                      }`}
+                          ? { color: "var(--text)" }
+                          : { color: "var(--text-3)" }),
+                      }}
                     >
                       {cfg.name}
                     </p>
@@ -383,9 +604,15 @@ export function ResearchAgentPanel({ jobId, socket }: ResearchAgentPanelProps) {
                           key={step?.status}
                           initial={{ opacity: 0, y: 3 }}
                           animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0 }}
+                          exit={{ opacity: 0, y: -2 }}
                           transition={{ duration: 0.2 }}
-                          className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 leading-snug"
+                          style={{
+                            fontSize: 10,
+                            color: "var(--text-3)",
+                            marginTop: 2,
+                            lineHeight: 1.5,
+                            fontFamily: "var(--font)",
+                          }}
                         >
                           {isActive ? cfg.running : cfg.done}
                         </motion.p>
@@ -393,7 +620,15 @@ export function ResearchAgentPanel({ jobId, socket }: ResearchAgentPanelProps) {
                     </AnimatePresence>
                   </div>
 
-                  <div className="flex items-center gap-1.5 flex-shrink-0 mt-0.5">
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      flexShrink: 0,
+                      marginTop: 1,
+                    }}
+                  >
                     <AnimatePresence>
                       {isDone && entity && <LLMBadge entity={entity} />}
                     </AnimatePresence>
@@ -412,15 +647,40 @@ export function ResearchAgentPanel({ jobId, socket }: ResearchAgentPanelProps) {
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
-            className="border-t border-gray-100 dark:border-gray-800 bg-green-50 dark:bg-green-950 px-3.5 py-2 flex items-center gap-2"
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            style={{
+              borderTop: "1px solid var(--border)",
+              background: "rgba(34,197,94,0.06)",
+              padding: "10px 16px",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
           >
-            <div className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" />
-            <span className="text-[10px] font-medium text-green-600 dark:text-green-400">
+            <div
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                background: "var(--green)",
+                boxShadow: "0 0 6px rgba(34,197,94,0.4)",
+                flexShrink: 0,
+              }}
+            />
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 500,
+                color: "var(--green)",
+                fontFamily: "var(--font)",
+              }}
+            >
               Research complete
             </span>
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }
