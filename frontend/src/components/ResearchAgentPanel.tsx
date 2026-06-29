@@ -3,15 +3,21 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  siTavily,
-  siGroq,
   siDeepseek,
   siMeta,
+  siMetaai,
   siGooglegemini,
-  siOpenai,
-  siMistral,
+  siMistralai,
   siAnthropic,
 } from "simple-icons";
+
+const FALLBACK_ICONS: Record<string, { hex: string }> = {
+  tavily:     { hex: "0070f3" },
+  groq:       { hex: "f97316" },
+  openai:     { hex: "412991" },
+  openrouter: { hex: "6366f1" },
+  pollinations:{ hex: "10b981" },
+};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -73,13 +79,13 @@ interface LLMInfo {
 const LLM_REGISTRY: Record<string, LLMInfo> = {
   tavily: {
     name: "Tavily",
-    icon: siTavily,
-    color: `#${siTavily.hex}`,
+    icon: null,
+    color: `#${FALLBACK_ICONS.tavily.hex}`,
   },
   groq: {
     name: "Groq",
-    icon: siGroq,
-    color: `#${siGroq.hex}`,
+    icon: null,
+    color: `#${FALLBACK_ICONS.groq.hex}`,
   },
   deepseek: {
     name: "DeepSeek",
@@ -103,13 +109,23 @@ const LLM_REGISTRY: Record<string, LLMInfo> = {
   },
   "meta-llama/llama-4-scout": {
     name: "Llama 4 Scout",
-    icon: siMeta,
-    color: `#${siMeta.hex}`,
+    icon: siMetaai,
+    color: `#${siMetaai.hex}`,
   },
   "meta-llama/llama-4-maverick": {
     name: "Llama 4 Maverick",
-    icon: siMeta,
-    color: `#${siMeta.hex}`,
+    icon: siMetaai,
+    color: `#${siMetaai.hex}`,
+  },
+  "llama-3.1-8b-instant": {
+    name: "Llama 3.1",
+    icon: siMetaai,
+    color: `#${siMetaai.hex}`,
+  },
+  "llama-3.3-70b-versatile": {
+    name: "Llama 3.3",
+    icon: siMetaai,
+    color: `#${siMetaai.hex}`,
   },
   googlegemini: {
     name: "Gemini",
@@ -123,23 +139,23 @@ const LLM_REGISTRY: Record<string, LLMInfo> = {
   },
   openai: {
     name: "OpenAI",
-    icon: siOpenai,
-    color: `#${siOpenai.hex}`,
+    icon: null,
+    color: `#${FALLBACK_ICONS.openai.hex}`,
   },
   "openai/gpt-oss-20b": {
     name: "GPT-OSS",
-    icon: siOpenai,
-    color: `#${siOpenai.hex}`,
+    icon: null,
+    color: `#${FALLBACK_ICONS.openai.hex}`,
   },
   mistral: {
     name: "Mistral",
-    icon: siMistral,
-    color: `#${siMistral.hex}`,
+    icon: siMistralai,
+    color: `#${siMistralai.hex}`,
   },
   "mistralai/mistral-small-3.1-24b-instruct": {
     name: "Mistral",
-    icon: siMistral,
-    color: `#${siMistral.hex}`,
+    icon: siMistralai,
+    color: `#${siMistralai.hex}`,
   },
   anthropic: {
     name: "Claude",
@@ -149,12 +165,12 @@ const LLM_REGISTRY: Record<string, LLMInfo> = {
   openrouter: {
     name: "OpenRouter",
     icon: null,
-    color: "#6366f1",
+    color: `#${FALLBACK_ICONS.openrouter.hex}`,
   },
   pollinations: {
     name: "Pollinations",
     icon: null,
-    color: "#10b981",
+    color: `#${FALLBACK_ICONS.pollinations.hex}`,
   },
 };
 
