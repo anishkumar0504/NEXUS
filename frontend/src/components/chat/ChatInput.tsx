@@ -11,14 +11,13 @@ interface ChatInputProps {
 export function ChatInput({ connected, sending, onSend }: ChatInputProps) {
   const [draft, setDraft] = useState("");
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
-  const [mentionPos, setMentionPos] = useState<{ top: number; left: number; placement: "above" | "below" }>({ top: 0, left: 0, placement: "above" });
+  const [mentionOpen, setMentionOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const inputBarRef = useRef<HTMLDivElement>(null);
 
   const updateMentionQuery = useCallback(() => {
     const ta = textareaRef.current;
-    const container = containerRef.current;
-    if (!ta || !container) return;
+    if (!ta) return;
 
     const text = ta.value;
     const cursorPos = ta.selectionStart;
@@ -27,74 +26,19 @@ export function ChatInput({ connected, sending, onSend }: ChatInputProps) {
     const lastAt = textBeforeCursor.lastIndexOf("@");
     if (lastAt === -1) {
       setMentionQuery(null);
+      setMentionOpen(false);
       return;
     }
 
     const afterAt = textBeforeCursor.slice(lastAt + 1);
     if (afterAt.includes(" ")) {
       setMentionQuery(null);
+      setMentionOpen(false);
       return;
     }
 
-    // Get cursor coordinates relative to viewport
-    const rect = ta.getBoundingClientRect();
-    const containerRect = container.getBoundingClientRect();
-
-    // Create a mirror element to measure exact cursor position
-    const mirror = document.createElement("div");
-    const computed = window.getComputedStyle(ta);
-    mirror.style.cssText = `
-      position: absolute;
-      top: 0;
-      left: 0;
-      visibility: hidden;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-      width: ${rect.width}px;
-      padding: ${computed.padding};
-      border: ${computed.border};
-      font: ${computed.font};
-      line-height: ${computed.lineHeight};
-      letter-spacing: ${computed.letterSpacing};
-    `;
-    mirror.textContent = textBeforeCursor;
-    const span = document.createElement("span");
-    span.textContent = "\u200b"; // zero-width space to mark cursor
-    mirror.appendChild(span);
-    document.body.appendChild(mirror);
-
-    const spanRect = span.getBoundingClientRect();
-    document.body.removeChild(mirror);
-
-    // Calculate position relative to container
-    const cursorX = spanRect.left - containerRect.left;
-    const cursorY = spanRect.top - containerRect.top;
-    const lineHeight = parseFloat(computed.lineHeight) || parseFloat(computed.fontSize) * 1.2;
-
-    const dropdownHeight = 220;
-    const dropdownWidth = 280;
-    const gap = 8;
-
-    // Check if there's room above; if not, place below
-    const spaceAbove = cursorY;
-    const spaceBelow = containerRect.height - cursorY - lineHeight;
-    const placement = spaceAbove >= dropdownHeight + gap || spaceAbove > spaceBelow ? "above" : "below";
-
-    // Clamp left position so dropdown doesn't overflow container
-    let left = cursorX;
-    if (left + dropdownWidth > containerRect.width) {
-      left = containerRect.width - dropdownWidth - 8;
-    }
-    if (left < 8) left = 8;
-
-    setMentionPos({
-      top: placement === "above" ? cursorY - dropdownHeight - gap : cursorY + lineHeight + gap,
-      left,
-      placement,
-    });
-
     setMentionQuery(afterAt);
+    setMentionOpen(true);
   }, []);
 
   function handleInput(e: React.ChangeEvent<HTMLTextAreaElement>) {
@@ -108,10 +52,11 @@ export function ChatInput({ connected, sending, onSend }: ChatInputProps) {
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (mentionQuery !== null) return;
+      if (mentionOpen) return;
       handleSend();
     }
     if (e.key === "Escape") {
+      setMentionOpen(false);
       setMentionQuery(null);
     }
   }
@@ -121,6 +66,7 @@ export function ChatInput({ connected, sending, onSend }: ChatInputProps) {
     onSend(draft);
     setDraft("");
     setMentionQuery(null);
+    setMentionOpen(false);
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
@@ -140,6 +86,7 @@ export function ChatInput({ connected, sending, onSend }: ChatInputProps) {
 
     setDraft(newText);
     setMentionQuery(null);
+    setMentionOpen(false);
 
     setTimeout(() => {
       ta.focus();
@@ -150,23 +97,24 @@ export function ChatInput({ connected, sending, onSend }: ChatInputProps) {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      if (inputBarRef.current && !inputBarRef.current.contains(event.target as Node)) {
+        setMentionOpen(false);
         setMentionQuery(null);
       }
     }
-    if (mentionQuery !== null) {
+    if (mentionOpen) {
       document.addEventListener("click", handleClickOutside);
       return () => document.removeEventListener("click", handleClickOutside);
     }
-  }, [mentionQuery]);
+  }, [mentionOpen]);
 
   return (
-    <div ref={containerRef} style={{ position: "relative" }}>
-      {mentionQuery !== null && (
+    <div ref={inputBarRef} style={{ position: "relative" }}>
+      {mentionOpen && mentionQuery !== null && (
         <MentionDropdown
           query={mentionQuery}
           onSelect={handleMentionSelect}
-          position={mentionPos}
+          inputBarRef={inputBarRef}
         />
       )}
 

@@ -1,33 +1,58 @@
 // src/components/chat/MentionDropdown.tsx
+import { useEffect, useState, useRef } from "react";
 import { ALL_AGENTS } from "./AgentConfig";
 
 interface MentionDropdownProps {
   query: string;
   onSelect: (agentName: string) => void;
-  position: { top: number; left: number; placement: "above" | "below" };
+  inputBarRef: React.RefObject<HTMLDivElement | null>;
 }
 
-export function MentionDropdown({ query, onSelect, position }: MentionDropdownProps) {
+export function MentionDropdown({ query, onSelect, inputBarRef }: MentionDropdownProps) {
+  const [placement, setPlacement] = useState<"above" | "below">("above");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   const filtered = ALL_AGENTS.filter((a) =>
     a.name.toLowerCase().includes(query.toLowerCase())
   );
 
+  useEffect(() => {
+    const bar = inputBarRef.current;
+    const dd = dropdownRef.current;
+    if (!bar || !dd) return;
+
+    const barRect = bar.getBoundingClientRect();
+    const ddHeight = dd.offsetHeight || 220;
+    const gap = 8;
+    const spaceAbove = barRect.top;
+    const spaceBelow = window.innerHeight - barRect.bottom;
+
+    setPlacement(spaceAbove >= ddHeight + gap ? "above" : "below");
+  }, [inputBarRef]);
+
   if (filtered.length === 0) return null;
+
+  const isAbove = placement === "above";
 
   return (
     <div
+      ref={dropdownRef}
       style={{
         position: "absolute",
-        top: position.top,
-        left: position.left,
+        left: 0,
+        right: 0,
+        bottom: isAbove ? "100%" : "auto",
+        top: isAbove ? "auto" : "100%",
+        marginBottom: isAbove ? 8 : 0,
+        marginTop: isAbove ? 0 : 8,
         zIndex: 100,
         background: "var(--bg-2)",
         border: "1px solid var(--border)",
         borderRadius: 12,
         padding: "6px 0",
         minWidth: 180,
-        maxWidth: "calc(100vw - 32px)",
-        width: "clamp(180px, 280px, calc(100% - 16px))",
+        maxWidth: "100%",
+        width: "100%",
         boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
         maxHeight: 220,
         overflowY: "auto",
