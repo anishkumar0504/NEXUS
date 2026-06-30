@@ -4,7 +4,7 @@ import { ALL_AGENTS } from "./AgentConfig";
 interface MentionDropdownProps {
   query: string;
   onSelect: (agentName: string) => void;
-  position: { top: number; left: number };
+  position: { top: number; left: number; placement: "above" | "below" };
 }
 
 export function MentionDropdown({ query, onSelect, position }: MentionDropdownProps) {
@@ -25,8 +25,14 @@ export function MentionDropdown({ query, onSelect, position }: MentionDropdownPr
         border: "1px solid var(--border)",
         borderRadius: 12,
         padding: "6px 0",
-        minWidth: 280,
+        minWidth: 180,
+        maxWidth: "calc(100vw - 32px)",
+        width: "clamp(180px, 280px, calc(100% - 16px))",
         boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
+        maxHeight: 220,
+        overflowY: "auto",
+        overscrollBehavior: "contain",
+        WebkitOverflowScrolling: "touch",
       }}
     >
       <div style={{ padding: "4px 12px 8px", fontSize: "0.7rem", color: "var(--text-3)", fontWeight: 600 }}>
@@ -46,6 +52,7 @@ export function MentionDropdown({ query, onSelect, position }: MentionDropdownPr
             background: "transparent",
             cursor: "pointer",
             textAlign: "left",
+            touchAction: "manipulation",
           }}
           onMouseEnter={(e) => {
             (e.currentTarget as HTMLElement).style.background = "var(--bg-3)";
@@ -71,7 +78,7 @@ export function MentionDropdown({ query, onSelect, position }: MentionDropdownPr
           >
             {agent.icon}
           </div>
-          <div style={{ minWidth: 0 }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ fontSize: "0.85rem", fontWeight: 500, color: "var(--text)" }}>
               @{agent.name}
             </div>
