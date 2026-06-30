@@ -11,12 +11,14 @@ interface ChatInputProps {
 export function ChatInput({ connected, sending, onSend }: ChatInputProps) {
   const [draft, setDraft] = useState("");
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
-  const [mentionPos, setMentionPos] = useState({ top: 0, left: 0 });
+  const [mentionPos, setMentionPos] = useState<{ top: number; left: number; placement: "above" | "below" }>({ top: 0, left: 0, placement: "above" });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const updateMentionQuery = useCallback(() => {
     const ta = textareaRef.current;
-    if (!ta) return;
+    const container = containerRef.current;
+    if (!ta || !container) return;
 
     const text = ta.value;
     const cursorPos = ta.selectionStart;
@@ -34,14 +36,62 @@ export function ChatInput({ connected, sending, onSend }: ChatInputProps) {
       return;
     }
 
-    const lines = textBeforeCursor.slice(0, lastAt).split("\n");
-    const currentLine = lines[lines.length - 1];
-    const charWidth = 8;
-    const dropdownHeight = 180;
+    // Get cursor coordinates relative to viewport
+    const rect = ta.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+
+    // Create a mirror element to measure exact cursor position
+    const mirror = document.createElement("div");
+    const computed = window.getComputedStyle(ta);
+    mirror.style.cssText = `
+      position: absolute;
+      top: 0;
+      left: 0;
+      visibility: hidden;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      width: ${rect.width}px;
+      padding: ${computed.padding};
+      border: ${computed.border};
+      font: ${computed.font};
+      line-height: ${computed.lineHeight};
+      letter-spacing: ${computed.letterSpacing};
+    `;
+    mirror.textContent = textBeforeCursor;
+    const span = document.createElement("span");
+    span.textContent = "\u200b"; // zero-width space to mark cursor
+    mirror.appendChild(span);
+    document.body.appendChild(mirror);
+
+    const spanRect = span.getBoundingClientRect();
+    document.body.removeChild(mirror);
+
+    // Calculate position relative to container
+    const cursorX = spanRect.left - containerRect.left;
+    const cursorY = spanRect.top - containerRect.top;
+    const lineHeight = parseFloat(computed.lineHeight) || parseFloat(computed.fontSize) * 1.2;
+
+    const dropdownHeight = 220;
+    const dropdownWidth = 280;
+    const gap = 8;
+
+    // Check if there's room above; if not, place below
+    const spaceAbove = cursorY;
+    const spaceBelow = containerRect.height - cursorY - lineHeight;
+    const placement = spaceAbove >= dropdownHeight + gap || spaceAbove > spaceBelow ? "above" : "below";
+
+    // Clamp left position so dropdown doesn't overflow container
+    let left = cursorX;
+    if (left + dropdownWidth > containerRect.width) {
+      left = containerRect.width - dropdownWidth - 8;
+    }
+    if (left < 8) left = 8;
 
     setMentionPos({
-      top: -dropdownHeight - 10,
-      left: currentLine.length * charWidth + 12,
+      top: placement === "above" ? cursorY - dropdownHeight - gap : cursorY + lineHeight + gap,
+      left,
+      placement,
     });
 
     setMentionQuery(afterAt);
@@ -99,8 +149,10 @@ export function ChatInput({ connected, sending, onSend }: ChatInputProps) {
   }
 
   useEffect(() => {
-    function handleClickOutside() {
-      setMentionQuery(null);
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setMentionQuery(null);
+      }
     }
     if (mentionQuery !== null) {
       document.addEventListener("click", handleClickOutside);
@@ -109,8 +161,7 @@ export function ChatInput({ connected, sending, onSend }: ChatInputProps) {
   }, [mentionQuery]);
 
   return (
-    <div style={{ position: "relative" }}>
-      {/* Dropdown ABOVE input */}
+    <div ref={containerRef} style={{ position: "relative" }}>
       {mentionQuery !== null && (
         <MentionDropdown
           query={mentionQuery}
