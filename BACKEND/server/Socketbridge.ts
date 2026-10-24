@@ -23,7 +23,9 @@ export function initSocketBridge(httpServer: HttpServer) {
   // to clients connected to the API process — same bridge pattern as
   // StreamForge's Redis pub/sub -> WebSocket relay.
   redisSub.psubscribe("group-broadcast:*");
-  redisSub.on("pmessage", (_pattern, channel, raw) => {
+  redisSub.on(
+  "pmessage",
+  (_pattern: string, channel: string, raw: string) => {
     const groupId = channel.replace("group-broadcast:", "");
     try {
       const message = JSON.parse(raw);
