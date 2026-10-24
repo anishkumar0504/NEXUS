@@ -1,274 +1,331 @@
-<p align="center">
-  <img src="https://img.shields.io/badge/NEXUS-Real--time%20AI%20Platform-6366f1?style=for-the-badge&logo=rocket&logoColor=white" />
-</p>
-<h1 align="center">NEXUS</h1>
-<p align="center">
-  <b>AI Search Engine × Real-Time Multi-Agent Group Chats</b><br/>
-  Perplexity-inspired search meets collaborative AI team conversations. Search the web with intelligent agents, then invite them into persistent group chats with distinct roles.
-</p>
-<p align="center">
-  <a href="https://ai-search-engine-amber-one.vercel.app/">🚀 Live Demo</a> •
-  <a href="#-key-features">Features</a> •
-  <a href="#-architecture">Architecture</a> •
-  <a href="#-core-functionality">Agents</a> •
-  <a href="#-getting-started">Getting Started</a>
-</p>
+# NEXUS
+
+**AI Search Engine × Real-Time Multi-Agent Group Collaboration**
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-nexus.iamanish.in-black?style=for-the-badge&logo=vercel)](https://nexus.iamanish.in/)
+[![Tech](https://img.shields.io/badge/Stack-React%2019%20%7C%20Node.js%20%7C%20TypeScript%20%7C%20Socket.IO%20%7C%20Prisma%20%7C%20Redis-blue?style=for-the-badge)](#-tech-stack)
+
+> Perplexity-style real-time web search meets collaborative multi-agent group chats.  
+> Search the web with streaming AI answers + citations, then invite specialized agents into persistent group rooms via `@mentions`.
+
+**Live:** [https://nexus.iamanish.in/](https://nexus.iamanish.in/)
+
 ---
- 
-## ✨ What's NEXUS?
- 
-NEXUS is a full-stack AI collaboration platform that combines two powerful experiences:
- 
-1. **🔍 AI Search Engine** — Perplexity-style real-time web search with streamed AI answers, source citations, and conversation memory.
-2. **💬 Multi-Agent Group Chats** — Persistent group rooms where humans and multiple specialized AI agents collaborate in real time. Mention agents with `@` to assign tasks.
+
+## 🎯 Project Overview (Resume Summary)
+
+**NEXUS** is a full-stack AI collaboration platform that unifies two production-grade experiences:
+
+1. **Intelligent AI Search Engine** — Real-time web search (Tavily), streaming answers (Gemini 2.5 Flash / multi-provider fallback), source citations, conversation memory, and smart caching.
+2. **Real-Time Multi-Agent Group Chats** — Socket.IO-powered rooms where humans and specialized AI agents collaborate. Users `@mention` agents (`@nexus`, `@summarizer`, `@imagegen`, `@research`) to delegate tasks. Heavy workloads (research, image generation) are offloaded to BullMQ workers.
+
+**Key engineering highlights for recruiters:**
+- End-to-end TypeScript (React 19 + Express)
+- Real-time bidirectional communication (Socket.IO)
+- Background job processing & rate limiting (BullMQ + Redis)
+- Multi-LLM orchestration with intelligent fallbacks (OpenRouter → Groq → Gemini)
+- Multi-step research agent with live progress streaming and mind-map generation
+- Auth (Supabase OAuth — Google/GitHub), PostgreSQL (Prisma), search result caching
+- Production deployment: Frontend on Vercel / custom domain, Backend on Render, DB/Auth on Supabase, Redis on Upstash/Redis Cloud
+
 ---
- 
-## 🚀 Key Features
- 
-### 🔎 Intelligent AI Search
-- **Real-time web search** powered by Tavily API
-- **Streaming AI responses** using Gemini 2.5 Flash
-- **Source citations** with clickable references
-- **Smart caching** to reduce API usage and improve speed
-- **Conversation history** with context-aware follow-ups
-### 👥 Real-Time Group Chats
-- **Socket.IO-powered** live messaging with presence indicators
-- **Persistent group rooms** — create, join, and manage multiple chat spaces
-- **Member avatars & live status** showing who's online
-- **Message history** synced across all clients instantly
-### 🤖 Multi-Agent Collaboration
-Invoke specialized AI agents inside any group chat using `@mentions`:
- 
-| Agent | Trigger | Role |
-|-------|---------|------|
-| **Nexus** | `@nexus` | General AI assistant — answers questions, searches history, summarizes context |
-| **Summarizer** | `@summarizer` | Condenses long conversations into key takeaways and action items |
-| **ImageGen** | `@imagegen` | Generates images from text descriptions directly in chat |
-| **Deep Research** | `@research` | Executes multi-step research workflows with web search, analysis, and mind-map generation |
- 
-- **Agent typing indicators** — see when an AI is "thinking"
-- **Research workflow panel** — visualize step-by-step research progress (plan → search → analyze → synthesize → mind map)
-- **Plan cards** — structured research outputs with sources and reasoning chains
-### 🔐 Authentication & Data
-- **Google & GitHub OAuth** via Supabase Auth
-- **PostgreSQL** database with Prisma ORM
-- **Redis + BullMQ** for background job processing and rate limiting
-- **Responsive UI** built with React 19, Tailwind CSS v4, and Framer Motion
+
+## ✨ Core Features
+
+### 🔎 AI Search Mode
+- Real-time web search via **Tavily API** (advanced depth)
+- Streaming token-by-token answers (SSE)
+- Inline source citations with clickable links
+- Conversation history + context-aware follow-ups
+- Search result caching (PostgreSQL, 1-hour TTL) to reduce API cost & latency
+- Clean, Perplexity-inspired UI with Framer Motion animations
+
+### 💬 Real-Time Group Chats
+- Create / join / manage persistent group rooms
+- Live messaging, presence indicators, member avatars
+- Message history persisted in PostgreSQL and synced instantly via Socket.IO
+- Typing indicators for both humans and agents
+
+### 🤖 Multi-Agent System (`@mentions`)
+
+| Agent          | Trigger        | Capabilities |
+|----------------|----------------|--------------|
+| **Nexus**      | `@nexus`       | General assistant. Uses chat history when relevant. For complex tasks, asks clarifying questions with options (Claude-style plan → confirm flow) before answering. |
+| **Summarizer** | `@summarizer`  | Condenses recent conversation into key takeaways, decisions, and action items. |
+| **ImageGen**   | `@imagegen`    | Generates images from text prompts (Pollinations / Hugging Face) and posts them directly in chat. |
+| **Deep Research** | `@research` | Multi-step research pipeline: Search → Extract facts → Analyze → Synthesize → Optional mind-map image + follow-up questions. Streams step-by-step progress to a dedicated Research Panel. |
+
+**Research Agent Pipeline (detailed):**
+1. **Search** — Tavily (advanced) with DuckDuckGo free fallback
+2. **Extract** — Key facts via OpenRouter free models (with Groq fallback)
+3. **Synthesize** — Structured answer with citations
+4. **Mind Map** (optional) — Generates visualization via free image endpoint
+5. **Follow-ups** — Suggests next questions
+
+All heavy agent work is processed asynchronously via **BullMQ workers**.
+
+### 🔐 Auth & Data Layer
+- Google + GitHub OAuth via Supabase Auth
+- JWT verification on every protected route
+- PostgreSQL schema (Users, Conversations, Messages, GroupChats, GroupMembers, Agents, Tasks, SearchCache)
+- Redis for job queues + rate limiting
+- AWS S3 / Supabase Storage for generated assets
+
 ---
- 
+
 ## 🏗 Architecture
- 
+
 ```
-┌─────────────────────────────────────────┐
-│           Frontend (React + Vite)       │
-│  ┌─────────────┐    ┌────────────────┐ │
-│  │ Search Mode │    │ Group Chat Mode│ │
-│  └──────┬──────┘    └───────┬────────┘ │
-└─────────┼───────────────────┼──────────┘
-          │                   │
-          ▼                   ▼
-┌─────────────────────────────────────────┐
-│      Express Backend (TypeScript)       │
-│  ┌─────────────┐    ┌────────────────┐ │
-│  │ REST API    │    │ Socket.IO      │ │
-│  │ /search     │    │ /chat rooms    │ │
-│  │ /history    │    │ /agents        │ │
-│  └──────┬──────┘    └───────┬────────┘ │
-└─────────┼───────────────────┼──────────┘
-          │                   │
-    ┌─────┴─────┐      ┌────┴────┐
-    ▼           ▼      ▼         ▼
-┌───────┐  ┌────────┐ ┌─────┐  ┌────────┐
-│Tavily │  │Gemini  │ │Redis│  │BullMQ  │
-│Search │  │2.5Flash│ │Cache│  │Workers │
-└───────┘  └────────┘ └─────┘  └────────┘
-                │
-         ┌──────┴──────┐
-         ▼             ▼
-    ┌─────────┐   ┌──────────┐
-    │Supabase │   │PostgreSQL│
-    │  Auth   │   │  Prisma  │
-    └─────────┘   └──────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    Frontend (React 19 + Vite)               │
+│  ┌──────────────────┐          ┌──────────────────────────┐ │
+│  │   Search Mode    │          │    Group Chat Mode       │ │
+│  │  (SSE streaming) │          │  (Socket.IO real-time)   │ │
+│  └────────┬─────────┘          └────────────┬─────────────┘ │
+└───────────┼─────────────────────────────────┼───────────────┘
+            │                                 │
+            ▼                                 ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Express + TypeScript Backend                   │
+│  ┌──────────────┐   ┌──────────────┐   ┌─────────────────┐  │
+│  │ REST Routes  │   │  Socket.IO   │   │  BullMQ Workers │  │
+│  │ /ask         │   │  rooms       │   │  agentWorker    │  │
+│  │ /conversations│  │  presence    │   │  messageWorker  │  │
+│  │ /groups      │   │  agent events│   │  research jobs  │  │
+│  └──────┬───────┘   └──────┬───────┘   └────────┬────────┘  │
+└─────────┼──────────────────┼────────────────────┼───────────┘
+          │                  │                    │
+    ┌─────┴─────┐      ┌─────┴─────┐        ┌─────┴─────┐
+    ▼           ▼      ▼           ▼        ▼           ▼
+┌───────┐  ┌────────┐ ┌─────┐  ┌────────┐ ┌─────┐  ┌────────┐
+│Tavily │  │Gemini /│ │Redis│  │BullMQ  │ │S3 / │  │PostgreSQL│
+│Search │  │OpenRouter│ │Cache│  │Queues  │ │Storage│ │(Prisma) │
+│       │  │Groq    │ └─────┘  └────────┘ └─────┘  └────────┘
+└───────┘  └────────┘
+                 │
+          ┌──────┴──────┐
+          ▼             ▼
+     ┌─────────┐   ┌──────────┐
+     │Supabase │   │  Auth    │
+     │  Auth   │   │  JWT     │
+     └─────────┘   └──────────┘
 ```
- 
-### Communication Flow
-1. **Search Mode** → HTTP REST API → Streaming SSE responses
-2. **Group Chat Mode** → WebSocket (Socket.IO) → Real-time bidirectional events
-3. **Agent Jobs** → BullMQ + Redis → Background processing for heavy tasks (research, image gen)
+
+**Communication patterns:**
+- Search → HTTP REST + Server-Sent Events (streaming)
+- Group Chat → WebSocket (Socket.IO) for bidirectional events
+- Agents → BullMQ jobs (research, image gen, summarization) so the main event loop stays responsive
+
 ---
- 
+
 ## 🛠 Tech Stack
- 
+
 ### Frontend
-- **React 19** + TypeScript + Vite
-- **Tailwind CSS v4** with Vite plugin
-- **Socket.IO Client** for real-time communication
-- **Framer Motion** for animations
-- **React Markdown** for rich message rendering
-- **Supabase Auth** for session management
+| Technology          | Purpose                          |
+|---------------------|----------------------------------|
+| React 19 + TypeScript | UI & type safety                |
+| Vite                | Build tool & HMR                 |
+| Tailwind CSS v4     | Styling                          |
+| Socket.IO Client    | Real-time chat                   |
+| Framer Motion       | Animations                       |
+| React Markdown      | Rich message rendering           |
+| Supabase JS         | Auth session management          |
+| React Router        | Client-side routing              |
+
 ### Backend
-- **Node.js** + **Express.js** + TypeScript
-- **Socket.IO** for WebSocket event handling
-- **BullMQ** + **Redis** for background job queues and rate limiting
-- **Prisma ORM** + **PostgreSQL** for data persistence
-- **Gemini 2.5 Flash** for AI generation
-- **Tavily API** for web search
-- **Supabase** for authentication
-### Deployment
-- **Vercel** — Frontend
-- **Render** — Backend API + Socket.IO server
-- **Supabase** — Database & Auth
-- **Redis Cloud / Upstash** — BullMQ broker & caching
+| Technology          | Purpose                          |
+|---------------------|----------------------------------|
+| Node.js + Express 5 | API server                       |
+| TypeScript          | Type safety                      |
+| Socket.IO           | Real-time events                 |
+| BullMQ + Redis      | Background jobs & rate limiting  |
+| Prisma + PostgreSQL | ORM & persistence                |
+| Supabase            | Auth + optional storage          |
+| Tavily              | Web search                       |
+| Google Gemini / OpenRouter / Groq | Multi-provider LLM orchestration |
+| Zod                 | Runtime validation               |
+| Vitest              | Testing                          |
+
+### Infrastructure
+- **Frontend**: Vercel (custom domain: [nexus.iamanish.in](https://nexus.iamanish.in/))
+- **Backend**: Render
+- **Database & Auth**: Supabase
+- **Redis**: Redis Cloud / Upstash (or local Docker)
+- **Object Storage**: AWS S3 (or Supabase Storage)
+
 ---
- 
-## 📸 Core Functionality
- 
-### AI Search Mode
-Users can search any topic and receive:
-- AI-generated answers with real-time web data
-- Inline source citations
-- Streaming token-by-token output
-- Persistent thread history with follow-up support
-### Group Chat Mode
-- Create or join group chat rooms
-- See live member presence and avatars
-- Send messages that persist in PostgreSQL
-- **@mention agents** to invoke specialized AI workers:
-  - `@summarizer` — "Summarize what we discussed about Kubernetes"
-  - `@imagegen` — "Generate a diagram of our microservices architecture"
-  - `@research` — "Research the latest Node.js performance benchmarks"
-  - `@nexus` — General Q&A and context recall
-### Research Agent Workflow
-When `@research` is invoked, the agent executes a 5-step pipeline:
-1. **Plan** — Breaks the query into sub-questions
-2. **Search** — Queries Tavily for live sources
-3. **Analyze** — Reads and evaluates source quality
-4. **Synthesize** — Combines findings into structured insights
-5. **Mind Map** — Generates a visual knowledge graph
-All steps stream progress to the Research Agent Panel in real time.
- 
----
- 
+
 ## 📂 Repository Structure
- 
+
 ```
 NEXUS/
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── chat/              # Group chat UI components
-│   │   │   │   ├── AgentConfig.ts     # Agent role definitions
+│   │   │   ├── chat/                 # Group chat UI
 │   │   │   │   ├── ChatHeader.tsx
-│   │   │   │   ├── ChatInput.tsx      # @mention support
+│   │   │   │   ├── ChatInput.tsx      # @mention autocomplete
 │   │   │   │   ├── MessageBubble.tsx
 │   │   │   │   ├── MessageList.tsx
 │   │   │   │   ├── MentionDropdown.tsx
 │   │   │   │   ├── ResearchAgentPanel.tsx
 │   │   │   │   └── PlanCard.tsx
-│   │   │   ├── ResearchAgentPanel.tsx
+│   │   │   ├── Auth.tsx
+│   │   │   ├── HomePage.tsx
 │   │   │   ├── ResultView.tsx
 │   │   │   ├── SearchBar.tsx
-│   │   │   └── Sidebar.tsx
+│   │   │   ├── Sidebar.tsx
+│   │   │   └── ResearchAgentPanel.tsx
 │   │   ├── hooks/
-│   │   │   ├── useGroupChat.ts    # Socket.IO chat logic
-│   │   │   ├── useGroupChats.ts   # Chat room management
+│   │   │   ├── useGroupChat.ts       # Socket.IO chat logic
+│   │   │   ├── useGroupChats.ts
 │   │   │   ├── useResearchSocket.ts
 │   │   │   └── useSearch.tsx
 │   │   ├── pages/
-│   │   │   ├── Chatpage.tsx       # Group chat page
-│   │   │   ├── Dashboard.tsx
-│   │   │   └── Auth.tsx
-│   │   └── types/                 # Shared TS types
+│   │   ├── lib/
+│   │   └── types/
 │   └── package.json
 │
-├── backend/
-│   ├── src/
-│   │   ├── routes/                # REST API routes
-│   │   ├── socket/                # Socket.IO handlers
-│   │   ├── workers/               # BullMQ background workers
-│   │   ├── services/              # AI & search services
-│   │   └── prisma/                # Database schema & client
-│   ├── package.json
-│   └── README.md
+├── BACKEND/
+│   ├── controllers/
+│   │   └── groupController.ts
+│   ├── lib/
+│   │   ├── agentDispatcher.ts       # @mention routing + clarifying questions
+│   │   ├── researchPipeline.ts      # Multi-step research agent
+│   │   ├── geminiClient.ts
+│   │   ├── groqClient.ts
+│   │   ├── openRouterClient.ts
+│   │   ├── imageClient.ts
+│   │   ├── s3Client.ts
+│   │   └── prisma.ts
+│   ├── middleware/
+│   │   └── middleware.ts            # Supabase JWT verification
+│   ├── prisma/
+│   │   ├── schema.prisma            # Full data model
+│   │   └── migrations/
+│   ├── queues/
+│   │   └── queues.ts                # BullMQ setup
+│   ├── routes/
+│   │   ├── ask.ts                   # Search + follow-up (streaming)
+│   │   ├── conversations.ts
+│   │   └── group.ts
+│   ├── server/
+│   ├── agentWorker.ts               # Background agent jobs
+│   ├── messageWorker.ts
+│   ├── messagePipeline.ts
+│   ├── index.ts
+│   └── package.json
 │
 └── README.md
 ```
- 
+
 ---
- 
-## 🚦 Getting Started
- 
-Detailed setup instructions are available in:
- 
-- [`frontend/README.md`](./frontend/README.md) — Vite + React setup, environment variables, Tailwind config
-- [`backend/README.md`](./backend/README.md) — Express + Socket.IO + BullMQ setup, Prisma migrations, Redis connection
-### Quick Start
- 
+
+## 🗄 Database Schema (Prisma)
+
+**Core models:**
+- `User` — Supabase UUID, name, email, provider (GitHub/Google)
+- `Conversation` + `Message` — Search history with optional sources JSON
+- `SearchCache` — Query → Tavily results with TTL
+- `GroupChat` + `GroupMember` + `GroupMessage`
+- `Agent` (SUMMARIZER | IMAGE_GEN | ASSISTANT | RESEARCH)
+- `Task` — Tracks agent job status (PENDING → RUNNING → COMPLETED/FAILED)
+
+Messages support both human (`USER`) and agent (`AGENT`) senders, with optional `triggeringUserId` for attribution.
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js 20+
+- PostgreSQL (or Supabase project)
+- Redis (local Docker or cloud)
+- API keys: Gemini / OpenRouter / Groq, Tavily, Supabase
+
+### 1. Clone
 ```bash
-# 1. Clone
 git clone https://github.com/anishkumar0504/NEXUS.git
 cd NEXUS
- 
-# 2. Backend
-cd backend
+```
+
+### 2. Backend
+```bash
+cd BACKEND
+cp .env.example .env
+# Fill in DATABASE_URL, DIRECT_URL, SUPABASE_*, GEMINI_API_KEY,
+# TAVILY_API_KEY, OPENROUTER_API_KEY, GROQ_API_KEY, REDIS_URL, etc.
+
 npm install
+npx prisma generate
 npx prisma migrate dev
-npm run dev
- 
-# 3. Frontend (new terminal)
+npm run dev          # http://localhost:8000
+```
+
+Optional: start Redis locally
+```bash
+docker compose up -d   # if docker-compose.yml is present
+```
+
+### 3. Frontend
+```bash
 cd frontend
+cp .env.example .env
+# VITE_BACKEND_URL=http://localhost:8000
+# VITE_SUPABASE_URL=...
+# VITE_SUPABASE_ANON_KEY=...
+
 npm install
-npm run dev
+npm run dev          # http://localhost:5173
 ```
- 
-### Required Environment Variables
- 
-**Backend**
-```env
-DATABASE_URL="postgresql://..."
-REDIS_URL="redis://..."
-SUPABASE_URL="..."
-SUPABASE_ANON_KEY="..."
-SUPABASE_SERVICE_ROLE_KEY="..."
-GEMINI_API_KEY="..."
-TAVILY_API_KEY="..."
-```
- 
-**Frontend**
-```env
-VITE_BACKEND_URL="http://localhost:3000"
-VITE_SUPABASE_URL="..."
-VITE_SUPABASE_ANON_KEY="..."
-```
- 
+
+### Environment Variables (Backend)
+See `BACKEND/.env.example` for the full list. Critical ones:
+- `DATABASE_URL` / `DIRECT_URL`
+- `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`
+- `GEMINI_API_KEY` / `OPENROUTER_API_KEY` / `GROQ_API_KEY`
+- `TAVILY_API_KEY`
+- `REDIS_URL`
+- `FRONTEND_URL` (for CORS)
+
 ---
- 
-## 🎯 Roadmap
- 
+
+## 🧪 Testing
+```bash
+cd BACKEND
+npm test              # Vitest
+npm run test:watch
+npm run coverage
+```
+
+---
+
+## 📈 Roadmap / Future Improvements
 - [x] Real-time multi-agent group chats
-- [x] @mention agent invocation system
-- [x] Deep research workflow with visual progress
-- [x] Socket.IO + BullMQ background processing
-- [ ] **Agent memory** — cross-conversation context recall
-- [ ] **File uploads** — RAG-based document chat in groups
-- [ ] **Voice messages** — STT/TTS integration
-- [ ] **Mobile app** — React Native companion
-- [ ] **Custom agents** — user-defined agent roles & prompts
-- [ ] **Agent marketplace** — share specialized agent configurations
+- [x] `@mention` agent invocation
+- [x] Deep research workflow with visual progress panel
+- [x] BullMQ background processing
+- [ ] Cross-conversation agent memory
+- [ ] File uploads + RAG in group chats
+- [ ] Voice messages (STT/TTS)
+- [ ] Custom user-defined agents
+- [ ] Agent marketplace / sharing
+- [ ] React Native companion app
+
 ---
- 
+
 ## 👨‍💻 Author
- 
-**Anish Kumar**
- 
-- GitHub: [@anishkumar0504](https://github.com/anishkumar0504)
-- Projects: LinkHub, Exchange Backend, YouTube System Backend, Web3 dApps
+
+**Anish Kumar**  
+GitHub: [@anishkumar0504](https://github.com/anishkumar0504)  
+Live Demo: [https://nexus.iamanish.in/](https://nexus.iamanish.in/)
+
+This project demonstrates end-to-end ownership of a modern AI product: real-time systems, multi-agent orchestration, streaming UX, background job reliability, auth, caching, and production deployment.
+
 ---
- 
+
 ## ⭐ Support
- 
-If you found this project useful, consider giving the repository a star — it helps others discover it!
- 
-<p align="center">
-  <i>Built with curiosity, caffeine, and a lot of Socket.IO events.</i>
-</p>
+
+If this project helped you or inspired your own work, a star on the repository is greatly appreciated!
+
+*Built with curiosity, TypeScript, Socket.IO events, and a lot of multi-provider LLM fallbacks.*
