@@ -6,9 +6,7 @@ export async function callOpenRouter(
   model: string = "meta-llama/llama-3.3-70b-instruct",
   retries = 3
 ): Promise<string> {
-  console.log("[openrouter] Key exists:", !!process.env.OPENROUTER_API_KEY);
-  console.log("[openrouter] Key length:", process.env.OPENROUTER_API_KEY?.length);
-  console.log("[openrouter] Model:", model);
+ 
 
   for (let i = 0; i <= retries; i++) {
     try {

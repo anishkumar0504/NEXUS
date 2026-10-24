@@ -18,7 +18,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1075.0",
     "@google/genai": "^2.7.0",
-    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/adapter-pg": "^6.19.0",
     "@prisma/client": "^6.19.0",
     "@supabase/supabase-js": "^2.108.2",
     "@tavily/core": "^0.7.3",
@@ -28,7 +28,6 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "node-cron": "^4.2.1",
-    "prisma": "^6.19.0",
     "socket.io": "^4.8.3",
     "zod": "^4.4.3",
     "zod-to-json-schema": "^3.25.2"
@@ -40,6 +39,7 @@
     "@types/node-cron": "^3.0.11",
     "@vitest/coverage-v8": "^4.1.7",
     "nodemon": "^3.1.14",
+    "prisma": "^6.19.0",
     "supertest": "^7.2.2",
     "ts-node": "^10.9.2",
     "tsx": "^4.22.3",

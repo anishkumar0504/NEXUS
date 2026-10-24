@@ -10,7 +10,7 @@ export default function Auth() {
   const { error } = await supabase.auth.signInWithOAuth({
     provider,
     options: {
-      redirectTo: "http://localhost:5173/dashboard",
+      redirectTo: `${window.location.origin}/dashboard`,
     },
   })
 

@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { prisma } from "../lib/prisma.js";
 import { messageQueue } from "../queues/queues.js";
 import { Server as SocketIOServer } from "socket.io";
-
+import { getIO } from "../server/Socketbridge.js";
 // ── Type-safe param extractor ──────────────────────────────
 function getParam(req: Request, key: string): string | undefined {
   const val = req.params[key];
@@ -94,9 +94,15 @@ export async function joinGroup(req: Request, res: Response) {
       }),
     ]);
 
-    const io = req.app.get("io") as SocketIOServer;
-    io.to(`group:${groupId}`).emit("member_joined", { member, groupId });
-    io.to(`group:${groupId}`).emit("new-message", systemMessage);
+
+
+try {
+  const io = getIO();
+  io.to(`group:${groupId}`).emit("member_joined", { member, groupId });
+  io.to(`group:${groupId}`).emit("new-message", systemMessage);
+} catch (err) {
+  console.error("[joinGroup] socket emit failed:", err);
+}
   }
 
   res.status(200).json({ message: "Joined group", groupId });

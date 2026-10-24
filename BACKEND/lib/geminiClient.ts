@@ -5,8 +5,8 @@ import { uploadToS3 } from "./s3Client.js";
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 
 // Use the available free models
-const TEXT_MODEL = "gemini-2.5-flash"; // 250K TPM, 5 RPM
-const IMAGE_MODEL = "gemini-2.5-flash-image"; // ← correct model string
+const TEXT_MODEL = "gemini-3.8-flash";
+const IMAGE_MODEL = "gemini-3.1-flash-image";
 
 export async function callGemini(
   contents: { role: string; parts: { text: string }[] }[],

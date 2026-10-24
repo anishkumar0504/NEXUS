@@ -1,15 +1,17 @@
+const DEFAULT_GROQ_MODEL = process.env.GROQ_MODEL ?? "openai/gpt-oss-120b";
+
 export async function callGroq(
   messages: { role: string; content: string }[],
-  model: string = "llama-3.3-70b-versatile",
+  model: string = DEFAULT_GROQ_MODEL,
   retries = 3
 ): Promise<string> {
   const body = JSON.stringify({
     model,
     messages,
     temperature: 0.7,
-    max_tokens: 2048,
+    max_tokens: 4096,          // was 2048, see note below
+    reasoning_effort: "low",   // gpt-oss is a reasoning model
   });
-
   for (let i = 0; i <= retries; i++) {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",

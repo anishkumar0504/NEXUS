@@ -3,7 +3,8 @@ import { tavily } from "@tavily/core";
 const tvly = tavily({ apiKey: process.env.TAVILY_API_KEY });
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-
+const GROQ_SMALL = process.env.GROQ_SMALL_MODEL ?? "openai/gpt-oss-20b";
+const GROQ_LARGE = process.env.GROQ_MODEL ?? "openai/gpt-oss-120b";
 // ============================================================================
 // VERIFIED WORKING FREE MODELS (June 2026) — NO :free SUFFIX
 // ============================================================================
@@ -39,7 +40,7 @@ const MODELS = {
       "google/gemma-3-27b-it",              // Lightweight
       "mistralai/mistral-small-3.1-24b-instruct", // Balanced
     ],
-    fallback: "llama-3.1-8b-instant",      // Groq
+    fallback: GROQ_SMALL ,      // Groq
   },
   synthesize: {
     primary: [
@@ -49,7 +50,7 @@ const MODELS = {
       "deepseek/deepseek-r1",               // Strong reasoning (slower)
       "qwen/qwen3-235b-a22b",               // Coding/analysis
     ],
-    fallback: "llama-3.3-70b-versatile",     // Groq
+    fallback: GROQ_LARGE ,     // Groq
   },
   followUp: {
     primary: [
@@ -58,7 +59,7 @@ const MODELS = {
       "google/gemma-3-27b-it",
       "x-ai/grok-3-mini-beta",              // Fast responses
     ],
-    fallback: "llama-3.1-8b-instant",       // Groq
+    fallback: GROQ_SMALL ,       // Groq
   },
   imagePrompt: {
     primary: [
@@ -66,7 +67,7 @@ const MODELS = {
       "meta-llama/llama-4-scout",
       "google/gemma-3-27b-it",
     ],
-    fallback: "llama-3.1-8b-instant",       // Groq
+    fallback: GROQ_SMALL ,       // Groq
   },
 } as const;
 

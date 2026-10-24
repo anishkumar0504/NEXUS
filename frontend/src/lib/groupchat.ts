@@ -1,7 +1,8 @@
 // src/lib/groupchat.ts
 
-const API_BASE = "http://localhost:3000/groups";
+import { BACKEND_URL } from "./config";
 
+const API_BASE = `${BACKEND_URL}/groups`;
 export interface GroupMember {
   id: string;
   userId: string;

@@ -9,9 +9,9 @@ import {
   type GroupMember,
   type GroupMessage,
 } from "../lib/groupchat";
+import { BACKEND_URL } from "../lib/config";
 
-const SOCKET_URL = "http://localhost:3000";
-
+const SOCKET_URL = BACKEND_URL;
 export interface UseGroupChatReturn {
   chat: GroupChat | null;
   messages: GroupMessage[];
