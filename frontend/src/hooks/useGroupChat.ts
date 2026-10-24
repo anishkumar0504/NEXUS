@@ -4,7 +4,7 @@ import {
   buildInviteLink,
   getGroupChat,
   getGroupMessages,
-  postGroupMessage, // ← ADDED
+  postGroupMessage, 
   type GroupChat,
   type GroupMember,
   type GroupMessage,
@@ -23,7 +23,7 @@ export interface UseGroupChatReturn {
   sendMessage: (content: string) => void;
   copyInviteLink: () => Promise<void>;
   inviteCopied: boolean;
-    socket: Socket | null; // ← ADD THIS
+    socket: Socket | null; 
 
 }
 
@@ -32,7 +32,7 @@ export function useGroupChat(
   token: string | null,
   currentUserId: string | null
 ): UseGroupChatReturn {
-  const [socket, setSocket] = useState<Socket | null>(null); // ← ADD STATE
+  const [socket, setSocket] = useState<Socket | null>(null); 
 
   const [chat, setChat] = useState<GroupChat | null>(null);
   const [messages, setMessages] = useState<GroupMessage[]>([]);
@@ -124,7 +124,7 @@ export function useGroupChat(
 setSocket(socket);
     socket.on("connect", () => {
       setConnected(true);
-      socket.emit("join-group", groupChatId); // ← FIXED: kebab-case, string
+      socket.emit("join-group", groupChatId); 
     });
 
     socket.on("disconnect", () => {
@@ -186,7 +186,7 @@ socket.on("group_message", handleMessage);
     });
 
     return () => {
-      socket.emit("leave-group", groupChatId); // ← FIXED: kebab-case, string
+      socket.emit("leave-group", groupChatId); 
       socket.disconnect();
       socketRef.current = null;
       setSocket(null);
@@ -200,12 +200,12 @@ socket.on("group_message", handleMessage);
       if (!groupChatId || !token || !content.trim()) return;
 
       const tempId = crypto.randomUUID();
-    const socketId = socketRef.current?.id; // ← GET SOCKET ID
-console.log("[sendMessage] socketId:", socketId); // ← ADD THIS DEBUG
+    const socketId = socketRef.current?.id; 
+console.log("[sendMessage] socketId:", socketId);
 
       // Build optimistic message with tempId stored for reconciliation
       const optimisticMsg: GroupMessage & { tempId: string } = {
-        id: tempId, // use tempId as id initially so React key is stable
+        id: tempId, 
         tempId,
         content: content.trim(),
         sources: null,
@@ -277,7 +277,7 @@ console.log("[sendMessage] socketId:", socketId); // ← ADD THIS DEBUG
     sendMessage,
     copyInviteLink,
     inviteCopied,
-       socket,// ← ADD THIS
+       socket,
 
   };
 }

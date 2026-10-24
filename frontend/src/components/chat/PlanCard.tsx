@@ -46,7 +46,7 @@ function parsePlanContent(content: string): ParsedPlan {
       // blank line after options — stop
       break;
     } else if (!inOptions && line) {
-      body.push(rawLine); // keep original indentation for body
+      body.push(rawLine); 
     }
   }
 

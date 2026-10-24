@@ -45,12 +45,12 @@ export interface ResearchCallbacks {
 const MODELS = {
   extract: {
     primary: [
-      "openrouter/free",                    // Auto-router — always works
-      "meta-llama/llama-4-scout",           // Fast, 128K
-      "google/gemma-3-27b-it",              // Lightweight
-      "mistralai/mistral-small-3.1-24b-instruct", // Balanced
+      "openrouter/free",                    
+      "meta-llama/llama-4-scout",           
+      "google/gemma-3-27b-it",              
+      "mistralai/mistral-small-3.1-24b-instruct",
     ],
-    fallback: GROQ_SMALL ,      // Groq
+    fallback: GROQ_SMALL ,      
   },
   synthesize: {
     primary: [
@@ -60,7 +60,7 @@ const MODELS = {
       "deepseek/deepseek-r1",               // Strong reasoning (slower)
       "qwen/qwen3-235b-a22b",               // Coding/analysis
     ],
-    fallback: GROQ_LARGE ,     // Groq
+    fallback: GROQ_LARGE ,     
   },
   followUp: {
     primary: [

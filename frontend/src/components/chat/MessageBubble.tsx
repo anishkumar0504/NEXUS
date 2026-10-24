@@ -259,7 +259,7 @@ export function MessageBubble({ msg, isSelf, showAvatar }: MessageBubbleProps) {
         className={`flex flex-col gap-0.5 ${
           isSelf ? "items-end" : "items-start"
         }`}
-        style={{ maxWidth: "min(85%, 720px)" }} // was max-w-[min(72%,560px)]
+        style={{ maxWidth: "min(85%, 720px)" }} 
       >
         {/* Sender name */}
         {showAvatar && !isSelf && (
@@ -299,8 +299,8 @@ export function MessageBubble({ msg, isSelf, showAvatar }: MessageBubbleProps) {
               : isSelf
               ? "#fff"
               : "var(--text)",
-            padding: "12px 18px", // was px-3.5 py-2 (14px × 8px) → now 18px × 12px
-            minHeight: "40px", // minimum height for short messages
+            padding: "12px 18px", 
+            minHeight: "40px", 
           }}
         >
           <MarkdownContent

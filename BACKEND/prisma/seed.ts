@@ -16,10 +16,9 @@ async function seed() {
   await prisma.agent.upsert({
     where: { name: "nexus" },
     update: {},
-    create: { name: "nexus", type: "ASSISTANT" }, // Change from SUMMARIZER to ASSISTANT
+    create: { name: "nexus", type: "ASSISTANT" }, 
   });
 
-  // ← ADD THIS
   await prisma.agent.upsert({
     where: { name: "research" },
     update: {},

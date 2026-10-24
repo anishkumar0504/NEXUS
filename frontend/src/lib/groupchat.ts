@@ -47,9 +47,9 @@ export interface GroupMessage {
     name: string;
   } | null;
   // ADD THESE:
-  jobId?: string;      // ← for tracking research jobs
-  isComplete?: boolean; // ← for research completion state
-  tempId?: string;     // ← if not already there
+  jobId?: string;      
+  isComplete?: boolean; 
+  tempId?: string;     
 }
 
 export interface GroupChat {
@@ -156,13 +156,13 @@ export async function postGroupMessage(
   groupId: string,
   content: string,
   tempId : string,
-    socketId?: string // ← ADD THIS
+    socketId?: string 
 
 ): Promise<{ status: string; tempId: string }> {
   const res = await fetch(`${API_BASE}/${groupId}/message`, {
     method: "POST",
     headers: getHeaders(token),
-    body: JSON.stringify({ content, tempId, socketId }), // ← SEND IT
+    body: JSON.stringify({ content, tempId, socketId }), 
   });
   if (!res.ok) {
     const error = await res.json();

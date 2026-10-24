@@ -1,8 +1,8 @@
   import { createServer } from "http";
   import { app } from "./server/server.js";
   import { initSocketBridge } from "./server/Socketbridge.js";
-  import { messageWorker } from "./messageWorker.js";      // named export
-  import { agentWorker } from "./agentWorker.js";         // named export
+  import { messageWorker } from "./messageWorker.js";      
+  import { agentWorker } from "./agentWorker.js";         
 
   // Reference them to prevent tree-shaking and satisfy TypeScript
   console.log("[workers] workers initialized:", !!messageWorker, !!agentWorker);

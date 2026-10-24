@@ -10,7 +10,7 @@ interface ResultViewProps {
   followUps: string[];
   loading: boolean;
   error: string | null;
-  allMessages: ChatMessage[];   // ADD THIS
+  allMessages: ChatMessage[];   
   onFollowUp: (query: string) => void;
 }
 
@@ -133,7 +133,7 @@ export function ResultView({
   sources,
   loading,
   error,
-    allMessages, // ADD THIS
+    allMessages, 
 
   onFollowUp,
 }: ResultViewProps) {

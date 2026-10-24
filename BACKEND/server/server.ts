@@ -32,15 +32,15 @@ app.use("/ask", askRouter);
 app.use("/conversation", conversationsRouter);
 app.get("/conversations", conversationsRouter); // list all
 app.use("/groups", groupRouter);
-// 404 for unknown routes (after all app.use routes)
+// 404 for unknown routes 
 app.use((req, res) => {
   res.status(404).json({ error: `Not found: ${req.method} ${req.path}` });
 });
 
-// Error handler (4 args required)
+// Error handler 
 app.use((err: any, req: any, res: any, next: any) => {
   console.error(err);
-  if (res.headersSent) return next(err); // already streaming, let Express close it
+  if (res.headersSent) return next(err); 
   res.status(500).json({ error: "Internal server error" });
 });
 export { app };

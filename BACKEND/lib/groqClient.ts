@@ -9,7 +9,7 @@ export async function callGroq(
     model,
     messages,
     temperature: 0.7,
-    max_tokens: 4096,          // was 2048, see note below
+    max_tokens: 4096,          
     reasoning_effort: "low",   // gpt-oss is a reasoning model
   });
   for (let i = 0; i <= retries; i++) {

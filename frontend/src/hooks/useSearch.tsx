@@ -257,7 +257,7 @@ export function useSearch(token: string | null) {
       if (lastUser) {
         setState({
           query: lastUser.content,
-          answer: "",          // ← always empty, allMessages has everything
+          answer: "",        
           sources: [],
           followUps: [],
           loading: false,

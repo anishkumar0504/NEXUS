@@ -17,7 +17,7 @@ export interface AgentJobData {
   prompt: string;
   triggeringUserId: string;
   tempId: string;
-    socketId?: string; // ← ADD THIS
+    socketId?: string; 
 
 }
 

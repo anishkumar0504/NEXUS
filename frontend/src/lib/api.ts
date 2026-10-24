@@ -147,7 +147,7 @@ async function readStream(
   let buffer = "";
   let sourcesReceived = false;
   let answerDone = false;
-  let convIdSent = false; // ← ADD THIS
+  let convIdSent = false; 
 
   while (true) {
     const { done, value } = await reader.read();
@@ -169,7 +169,7 @@ async function readStream(
           sourcesReceived = true;
 
           const convMatch = (after || "").match(/<CONV_ID>(.+?)<\/CONV_ID>/);
-          if (convMatch && !convIdSent) { // ← ADD !convIdSent
+          if (convMatch && !convIdSent) { 
             convIdSent = true;
             onConversationId(convMatch[1]);
           }

@@ -41,7 +41,6 @@ export function useGroupChats(token: string | null): UseGroupChatsReturn {
     fetchChats();
   }, [fetchChats]);
 
-  // ✅ Optimistic Create
   const handleCreate = async (name: string) => {
     if (!token) throw new Error("Not authenticated");
 
@@ -50,7 +49,7 @@ export function useGroupChats(token: string | null): UseGroupChatsReturn {
     const optimisticChat: GroupChat = {
       id: tempId,
       name,
-      members: [], // Placeholder
+      members: [], 
       _count: { messages: 0 },
       createdAt: new Date().toISOString(),
     } as unknown as GroupChat;
@@ -71,7 +70,7 @@ export function useGroupChats(token: string | null): UseGroupChatsReturn {
     }
   };
 
-  // ✅ Optimistic Join
+  
   const handleJoin = async (groupId: string) => {
     if (!token) throw new Error("Not authenticated");
 
