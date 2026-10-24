@@ -298,21 +298,6 @@ npm run test:watch
 npm run coverage
 ```
 
----
-
-## 📈 Roadmap / Future Improvements
-- [x] Real-time multi-agent group chats
-- [x] `@mention` agent invocation
-- [x] Deep research workflow with visual progress panel
-- [x] BullMQ background processing
-- [ ] Cross-conversation agent memory
-- [ ] File uploads + RAG in group chats
-- [ ] Voice messages (STT/TTS)
-- [ ] Custom user-defined agents
-- [ ] Agent marketplace / sharing
-- [ ] React Native companion app
-
----
 
 ## 👨‍💻 Author
 
