@@ -8,6 +8,16 @@ const GROQ_LARGE = process.env.GROQ_MODEL ?? "openai/gpt-oss-120b";
 // ============================================================================
 // VERIFIED WORKING FREE MODELS (June 2026) — NO :free SUFFIX
 // ============================================================================
+
+
+type ResearchSource = {
+  index: number;
+  title: string;
+  url: string;
+  content: string;
+};
+
+
 export interface ResearchStep {
   step: number;
   status: "running" | "complete" | "error";
@@ -234,7 +244,7 @@ async function callGroq(
 async function callLLM(
   messages: { role: string; content: string }[],
   config: {
-    primaryModels: string[];
+primaryModels: readonly string[];
     fallbackModel: string;
     temperature?: number;
     maxTokens?: number;
@@ -295,17 +305,19 @@ async function searchSources(query: string) {
   }));
 }
 
-async function searchSourcesFree(query: string) {
-  const { search } = await import("duck-duck-scraper");
-  const results = await search(query);
-  return results.slice(0, 5).map((r: any, i: number) => ({
+async function searchSourcesFree(
+  query: string
+): Promise<ResearchSource[]> {
+  const { search } = await import("duck-duck-scrape");
+  const searchResult = await search(query);
+
+  return searchResult.results.slice(0, 5).map((r, i) => ({
     index: i + 1,
     title: r.title,
     url: r.url,
     content: r.description?.slice(0, 600) || "",
   }));
 }
-
 // ============================================================================
 // IMAGE GENERATION (Pollinations — free, no key)
 // ============================================================================
@@ -352,7 +364,7 @@ export async function runResearch(query: string, callbacks?: ResearchCallbacks):
     emitStep({ step: 1, status: "running", tool: "tavily", label: "Searching sources..." });
     console.log("[research] Step 1: Searching sources...");
     
-    let rawSources;
+let rawSources: ResearchSource[];
     try {
       rawSources = await searchSources(query);
     } catch {

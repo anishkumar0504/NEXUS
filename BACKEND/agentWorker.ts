@@ -22,8 +22,18 @@ export const agentWorker = new Worker<AgentJobData>(
 
     let content: string;
     let agentId: string | undefined;
-    let sources: { image?: string } | null = null;
+type MessageSources = {
+  image?: string | null;
+  citations?: {
+    title: string;
+    url: string;
+    content?: string;
+  }[];
+  followUpQuestions?: string[];
+  mindMapImage?: string | null;
+};
 
+let sources: MessageSources | null = null;
     try {
       if (agentName === "research") {
         const io = getIO();

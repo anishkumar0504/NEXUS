@@ -7,8 +7,8 @@ export interface MessageJobData {
   senderType: "USER" | "AGENT";
   userId?: string;
   agentId?: string;
-  /** client-generated id so the frontend can reconcile optimistic UI */
   tempId: string;
+  socketId?: string;
 }
 
 export interface AgentJobData {

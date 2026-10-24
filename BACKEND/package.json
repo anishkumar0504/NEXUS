@@ -18,6 +18,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1075.0",
     "@google/genai": "^2.7.0",
+    "@huggingface/inference": "^4.13.32",
     "@prisma/adapter-pg": "^6.19.0",
     "@prisma/client": "^6.19.0",
     "@supabase/supabase-js": "^2.108.2",
@@ -26,6 +27,7 @@
     "bullmq": "^5.79.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
+    "duck-duck-scrape": "^2.2.7",
     "express": "^5.2.1",
     "node-cron": "^4.2.1",
     "socket.io": "^4.8.3",
@@ -35,7 +37,7 @@
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
-    "@types/node": "^25.9.1",
+    "@types/node": "^25.9.9",
     "@types/node-cron": "^3.0.11",
     "@vitest/coverage-v8": "^4.1.7",
     "nodemon": "^3.1.14",

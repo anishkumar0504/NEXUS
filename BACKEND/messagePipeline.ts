@@ -1,6 +1,7 @@
 // server/messagePipeline.ts
 import { prisma } from "./lib/prisma.js";
 import { redisCache } from "./redis/redis.js";
+import { Prisma } from "./generated/prisma/client.js";
 
 const CACHE_TTL_SECONDS = 60 * 10;
 const CACHE_MAX_MESSAGES = 50;
@@ -13,7 +14,16 @@ export interface PipelineMessage {
   senderType: "USER" | "AGENT" | "SYSTEM";
   userId?: string;
   agentId?: string;
-  sources?: { image?: string } | null;
+sources?: {
+  image?: string | null;
+  citations?: {
+    title: string;
+    url: string;
+    content?: string;
+  }[];
+  followUpQuestions?: string[];
+  mindMapImage?: string | null;
+} | null;
   triggeringUserId?: string;
   createdAt: string;
   id?: string;
@@ -46,7 +56,7 @@ export async function persistMessage(message: PipelineMessage) {
       senderType: message.senderType,
       userId: message.userId,
       agentId: message.agentId,
-      sources: message.sources || null,
+sources: message.sources ?? Prisma.DbNull,
       triggeringUserId: message.triggeringUserId || null,
     },
   });
@@ -74,7 +84,7 @@ export async function runMessagePipeline(message: PipelineMessage) {
     user: fullMessage?.user ?? null,
     agent: fullMessage?.agent ?? null,
     triggeringUserId: message.triggeringUserId,
-    sources: message.sources,
+sources: message.sources ?? null,
   };
 
   await cacheMessage(confirmed);
