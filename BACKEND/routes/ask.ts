@@ -21,7 +21,7 @@ const ai = new GoogleGenAI({
 });
 
 // Primary model remains unchanged.
-const PRIMARY_MODEL = "gemini-3.8-flash";
+const PRIMARY_MODEL = "gemini-3.1-flash-lite";
 
 // Configure only model IDs supported by your Gemini API project.
 // Supports multiple comma-separated fallback models.
